@@ -11,19 +11,35 @@ def Rand(start, end, num):
         res.append(random.randint(start, end)) 
     return res
 
-ubd = []
-lbd = []
+a1, a2, b1, b2, c1, c2 = [], [], [], [], [], []
 
-ps = [x* 1.0 /1000 for x in range(50)]
+ps = [x* 1.0 /10 for x in range(50)]
 
+num_trial = 100
+# transfer payment values
 for i in range(50):
-    bd = main(ps[i])
-    ubd.append(bd[0])
-    lbd.append(bd[1])
+    # trial
+    res = [0,0,0,0,0,0]
+    temp = []
+    for k in range(num_trial):
+        temp = main(ps[i])
+        for j in range(len(temp)):
+            res[j] += temp[j]
+    for j in range(len(res)):
+        res[j] = res[j]/float(num_trial)
 
-plt.plot(lbd, 'b--')
+    a1.append(res[0])
+    a2.append(res[1])
+    b1.append(res[2])
+    b2.append(res[3])
+    c1.append(res[4])
+    c2.append(res[5])
 
-plt.title('payment amt vs lbd, upperbd %f' %ubd[0])
+plt.plot(a1, 'b--', a2, 'b-', b1, 'r--', b2, 'r-', c1, 'g--', c2, 'g-')
+
+plt.title('payment amt vs costs')
 plt.xlabel("payment")
 plt.ylabel("bound")
+# plt.axis([0, 6, 0, 100])
+plt.legend(["a1", "a2", "b1", "b2", "c1", "c2"])
 plt.savefig('output.png')
