@@ -91,14 +91,13 @@ class Payment(object):
 
 class Channel(object):
 	channels = []
-	def __init__(self, A, B, mA, mB, network):
+	def __init__(self, A, B, m, network):
 		# super().__init__(A, B, network)
 		self.A = A
 		self.B = B
-		self.mA = mA
-		self.balanceA = mA
-		self.mB = mB
-		self.balanceB = mB
+		self.m = m
+		self.balanceA = 0
+		self.balanceB = 0
 		self.paymentsA = []
 		self.paymentsB = []
 		self.txTimesA = []
@@ -106,7 +105,7 @@ class Channel(object):
 
 		self.network = network
 
-		self.cost = network.onlineTX
+		self.cost = 0
 		self.transferPayment = None
 
 		A.addChannel(self)
@@ -140,11 +139,6 @@ class Channel(object):
 		# print("add payment in  " + payment.sender.name + " to " + payment.reciever.name)
 		if payment.sender == self.A:
 			self.paymentsA.append(payment)
-
-			# for i in range(int(self.mA//payment.amt)):
-			# 	self.txTimesA.append(random.expovariate(payment.freq))
-
-			# reconstruct the timeline 
 
 		elif payment.sender == self.B:
 			self.paymentsB.append(payment)
@@ -183,15 +177,37 @@ class Channel(object):
 	# def getOppoCost(self):
 	# 	return self.transferPayment.amt - self.transferPayment.amt * (self.getLifetime() // (self.getLifetime() + self.network.r))
 
+	def setChannelSize(self, m):
+		self.m = m
+
+	def avergeFreq(self, payments):
+		pavg = 0
+		psum = 0
+		for p in payments:
+			pavg += (p.amt * p.freq)
+			psum += p.amt
+		if psum == 0: return 0
+		return (pavg/psum)
+
+	def optimizeSize(self):
+		fA = self.avergeFreq(self.paymentsA)
+		fB = self.avergeFreq(self.paymentsB)
+
+		f = abs(fA-fB)
+
+		optimialSize = math.sqrt(self.network.onlineTX * f / self.network.r)
+
+		self.setChannelSize(optimialSize)
+
 	def reopen(self, side):
 		self.updateCost()
 
 		payments = []
 		if self.A == side:
-			self.balanceA = self.mA
+			self.balanceA = self.m
 			payments = self.paymentsA
 		elif self.B == side:
-			self.balanceB = self.mB
+			self.balanceB = self.m
 			payments = self.paymentsB
 
 		# channel suspended for network online transaction time
@@ -295,6 +311,9 @@ class Network(object):
 		# and when it has been processed, all other payments' interval decrement by the interval of the processed payment
 		# and the processed payment has a new interval that gets put into the timeline
 
+		for c in self.channels:
+			c.optimizeSize()
+
 		while self.timeLeft >= 0:
 
 			nextPayment = self.payments[0]
@@ -319,15 +338,19 @@ class Network(object):
 
 				self.history.append((self.timeLeft, nextPayment, nextPayment.channel.balanceA, nextPayment.channel.balanceB))
 
+		# self.printSummary()
 		# print(self.history)
 		# for p in self.payments:
 		# 	print([p, p.numPaid])
 			
+	def printSummary(self):
+		for c in self.channels:
+			print([c.A, c.B, c.m])
+
+	
 
 
-
-
-def main(p=0.1, onlineTX = 5, onlineTXTime = 1, r = 0.01, timeRun = 10):
+def main(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun = 10.0):
 	# set up the network
 	network1 = Network(onlineTX, onlineTXTime, r, timeRun)
 
@@ -337,15 +360,15 @@ def main(p=0.1, onlineTX = 5, onlineTXTime = 1, r = 0.01, timeRun = 10):
 
 	paymentAB = Payment(2, 1, Alice1, Bob1)
 	paymentBC = Payment(2, 1, Bob1, Charlie1)
-	paymentAC = Payment(0.5, p, Alice1, Charlie1)
+	paymentAC = Payment(freq, p, Alice1, Charlie1)
 
-	channelAB1 = Channel(Alice1, Bob1, 5, 0, network1)
+	channelAB1 = Channel(Alice1, Bob1, 5, network1)
 	channelAB1.addPayment(paymentAB)
-	channelBC1 = Channel(Bob1, Charlie1, 10, 10, network1)
+	channelBC1 = Channel(Bob1, Charlie1, 20, network1)
 	channelBC1.addPayment(paymentBC)
 
 	# Alice creates a direct channel for network 1
-	channelAC = Channel(Alice1, Charlie1, 5, 0, network1)
+	channelAC = Channel(Alice1, Charlie1, 5, network1)
 	channelAC.addPayment(paymentAC)
 	
 	# print("network1")
@@ -374,9 +397,9 @@ def main(p=0.1, onlineTX = 5, onlineTXTime = 1, r = 0.01, timeRun = 10):
 	paymentAC2 = Payment(0.5, p, Bob2, Charlie2)
 	paymentAC1.setTransfer(paymentAC2)
 
-	channelAB2 = Channel(Alice2, Bob2, 5, 0, network2)
+	channelAB2 = Channel(Alice2, Bob2, 5, network2)
 	channelAB2.addPayment(paymentAB1)
-	channelBC2 = Channel(Bob2, Charlie2, 10, 10, network2)
+	channelBC2 = Channel(Bob2, Charlie2, 20, network2)
 	channelBC2.addPayment(paymentBC1)
 
 	# payment goes through Channel AB and BC
@@ -404,7 +427,7 @@ def main(p=0.1, onlineTX = 5, onlineTXTime = 1, r = 0.01, timeRun = 10):
 
 
 
-	return (a1, a2, b1, b2, c1, c2)
+	return (a1-a2+c1-c2, b2-b1)
 
 	# network = Network()
 	# network.addNode(Alice)
