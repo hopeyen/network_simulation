@@ -46,7 +46,7 @@ class Node(object):
 	def getChCostTotal(self):
 		self.channelCost = 0
 		for c in self.channels:
-			self.channelCost += c.cost
+			self.channelCost += c.cost *1.0 /2
 		return self.channelCost
 
 
@@ -89,13 +89,29 @@ class Payment(object):
 		self.transferTo = payment
 
 
+	def estimateUbd(self):
+	    network = self.sender.network
+	    return math.sqrt(2 * network.onlineTX * self.freq * self.amt / network.r)
+
+	def estimtedLbd(self, paymentAB):
+	    n = self.sender.network
+	    # interests = (payment.amt * network.r)/ (lifetime + network.r)
+	    cnb1 = math.sqrt(2 * n.onlineTX * (self.freq * self.amt + paymentAB.freq * paymentAB.amt) / n.r)
+	    cnb2 = 3 * ((2 * n.onlineTX * (self.freq + paymentAB.freq) / n.r)**(1.0/3))
+	    cob1 = math.sqrt(2 * n.onlineTX * paymentAB.freq * paymentAB.amt / n.r)
+	    cob2 = 3 * ((2 * n.onlineTX * paymentAB.freq / n.r)**(1.0/3))
+	    return cnb1 + cnb2 - cob1 - cob2
+
+
+
 class Channel(object):
 	channels = []
-	def __init__(self, A, B, m, network):
+	def __init__(self, A, B, mA, mB, network):
 		# super().__init__(A, B, network)
 		self.A = A
 		self.B = B
-		self.m = m
+		self.mA = mA
+		self.mB = mB
 		self.balanceA = 0
 		self.balanceB = 0
 		self.paymentsA = []
@@ -133,7 +149,8 @@ class Channel(object):
 		return self.cost
 
 	def updateCost(self):
-		self.cost += self.network.onlineTX
+		# add discounted onlineTx cost to the total cost
+		self.cost += self.network.onlineTX * math.exp(-1 * self.network.r * (self.network.totalTime - self.network.timeLeft))
 
 	def addPayment(self, payment):
 		# print("add payment in  " + payment.sender.name + " to " + payment.reciever.name)
@@ -177,8 +194,9 @@ class Channel(object):
 	# def getOppoCost(self):
 	# 	return self.transferPayment.amt - self.transferPayment.amt * (self.getLifetime() // (self.getLifetime() + self.network.r))
 
-	def setChannelSize(self, m):
-		self.m = m
+	def setChannelSize(self, mA, mB):
+		self.mA = mA
+		self.mB = mB
 
 	def avergeFreq(self, payments):
 		pavg = 0
@@ -192,22 +210,30 @@ class Channel(object):
 	def optimizeSize(self):
 		fA = self.avergeFreq(self.paymentsA)
 		fB = self.avergeFreq(self.paymentsB)
+		oneWay = 0
+		bidir = 0
 
-		f = abs(fA-fB)
+		alpha = min(fA, fB)
+		beta = max(fA, fB)
 
-		optimialSize = math.sqrt(self.network.onlineTX * f / self.network.r)
+		oneWay = math.sqrt(self.network.onlineTX * (beta - alpha) / self.network.r)
+		bidir = (2 * self.network.onlineTX * alpha / self.network.r)**(1.0/3)
 
-		self.setChannelSize(optimialSize)
+		if alpha == fA:
+			self.setChannelSize(bidir, bidir+oneWay)
+		else:
+			self.setChannelSize(bidir+oneWay, bidir)
+
 
 	def reopen(self, side):
 		self.updateCost()
 
 		payments = []
 		if self.A == side:
-			self.balanceA = self.m
+			self.balanceA = self.mA
 			payments = self.paymentsA
 		elif self.B == side:
-			self.balanceB = self.m
+			self.balanceB = self.mB
 			payments = self.paymentsB
 
 		# channel suspended for network online transaction time
@@ -282,6 +308,7 @@ class Network(object):
 		self.r = r
 		self.nodes = []
 		self.channels = []
+		self.totalTime = timeLeft
 
 		self.timeLeft = timeLeft
 		self.payments = []
@@ -345,9 +372,15 @@ class Network(object):
 			
 	def printSummary(self):
 		for c in self.channels:
-			print([c.A, c.B, c.m])
+			print([c.A, c.B, c.mA, c.mB])
 
-	
+	def getTotalCost(self):
+		s = 0
+		for n in self.nodes:
+			s += n.getChCostTotal()
+		return s
+
+def buildNetwork():
 
 
 def main(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun = 10.0):
@@ -362,13 +395,13 @@ def main(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun 
 	paymentBC = Payment(2, 1, Bob1, Charlie1)
 	paymentAC = Payment(freq, p, Alice1, Charlie1)
 
-	channelAB1 = Channel(Alice1, Bob1, 5, network1)
+	channelAB1 = Channel(Alice1, Bob1, 5, 0, network1)
 	channelAB1.addPayment(paymentAB)
-	channelBC1 = Channel(Bob1, Charlie1, 20, network1)
+	channelBC1 = Channel(Bob1, Charlie1, 20, 20, network1)
 	channelBC1.addPayment(paymentBC)
 
 	# Alice creates a direct channel for network 1
-	channelAC = Channel(Alice1, Charlie1, 5, network1)
+	channelAC = Channel(Alice1, Charlie1, 5, 0, network1)
 	channelAC.addPayment(paymentAC)
 	
 	# print("network1")
@@ -397,9 +430,9 @@ def main(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun 
 	paymentAC2 = Payment(0.5, p, Bob2, Charlie2)
 	paymentAC1.setTransfer(paymentAC2)
 
-	channelAB2 = Channel(Alice2, Bob2, 5, network2)
+	channelAB2 = Channel(Alice2, Bob2, 5, 0, network2)
 	channelAB2.addPayment(paymentAB1)
-	channelBC2 = Channel(Bob2, Charlie2, 20, network2)
+	channelBC2 = Channel(Bob2, Charlie2, 20, 20, network2)
 	channelBC2.addPayment(paymentBC1)
 
 	# payment goes through Channel AB and BC
@@ -424,10 +457,11 @@ def main(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun 
 	# each time the channel balance depletes, update the channel cost -- the nodes update the channel
 	# at the end of the time period, sum up the channel cost
 
+	lbd = paymentAC1.estimtedLbd(paymentAB1)
+	ubd = paymentAC1.estimateUbd()
 
 
-
-	return (a1-a2+c1-c2, b2-b1)
+	return (a1-a2+c1-c2, b2-b1, lbd, ubd)
 
 	# network = Network()
 	# network.addNode(Alice)
