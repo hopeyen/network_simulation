@@ -6,6 +6,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 import matplotlib.mlab as mlab
 import matplotlib.gridspec as gridspec
+from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
 
 
 def Rand(start, end, num): 
@@ -27,7 +28,7 @@ def getIntersectionPoint(list1, list2):
 upperbound, lowerbound, intersection = [], [], []
 estimatedubd, estimatedlbd = [], []
 
-num_trial = 10
+num_trial = 1000
 time = 20
 
 times = [x* 10.0 for x in range(1, time)]
@@ -36,12 +37,12 @@ times = [x* 10.0 for x in range(1, time)]
 # transfer payment values
 
 def runWithPayment(time):
-    ps = [x* 1.0 /100 for x in range(1, 100)]
+    ps = [x* 1.0 /10 for x in range(1, 100)]
     # ps = np.arange(0.0, 1.0 + 0.01, 0.01)
 
     for i in range(len(ps)):
         # trial
-        res = [0, 0, 0, 0]
+        res = [0, 0, 0, 0, 0, 0, 0, 0]
         temp = []
         for k in range(num_trial):
             temp = main(p=ps[i], timeRun = time)
@@ -56,19 +57,24 @@ def runWithPayment(time):
         estimatedubd.append(res[3])
     # pnw1.append()
 
-    plt.plot(upperbound, 'b-', lowerbound, 'g-', estimatedubd, 'b--', estimatedlbd, 'g--')
+    fig, ax = plt.subplots()
+    ax.plot(ps, upperbound)
+    ax.plot(ps, lowerbound)
 
-    plt.title('payment size vs costs')
 
-    plt.xlabel("payment")
-    plt.ylabel("bound")
+
+    # ax.plot(upperbound, 'b-', lowerbound, 'g-', )
+    ax.set_title('Transferred payment size vs Cost differences')
+    ax.set_xlabel('Payment')
+    ax.set_ylabel('Cost differences')
+
     # plt.axis([0, 6, 0, 100])
-    plt.legend(["upperbound", "lowerbound", "estimatedubd", "estimatedlbd"])
-    plt.savefig('output.png')
-    plt.show()
+    fig.legend(["upperbound", "lowerbound"])
+    fig.savefig('output.png')
 
 
     return getIntersectionPoint(upperbound, lowerbound)
+
 
 def runWithFreq():
     fs = [x* 10.0  for x in range(1,100)]
@@ -118,4 +124,24 @@ runWithPayment(10)
 
 
 
+def simple():
+    t = np.arange(0.0, 100.0, 0.1)
+    s = np.sin(0.1 * np.pi * t) * np.exp(-t * 0.01)
 
+    fig, ax = plt.subplots()
+    ax.plot(t, s)
+
+    # Make a plot with major ticks that are multiples of 20 and minor ticks that
+    # are multiples of 5.  Label major ticks with '.0f' formatting but don't label
+    # minor ticks.  The string is used directly, the `StrMethodFormatter` is
+    # created automatically.
+    ax.xaxis.set_major_locator(MultipleLocator(40))
+    ax.xaxis.set_major_formatter('{x:.0f}')
+
+    # For the minor ticks, use no labels; default NullFormatter.
+    ax.xaxis.set_minor_locator(MultipleLocator(10))
+
+    plt.savefig('simple.png')
+
+
+# simple()
