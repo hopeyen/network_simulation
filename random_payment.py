@@ -76,33 +76,33 @@ def transform(points):
 
 alice0, bob0, alice1, bob1, alice2, bob2 = [], [], [], [], [], []
 
-num_trial = 500
+num_trial = 200
 
 time = 50
 
 givenP = 0.5
 
-freqMean = 1.50
+paymentMean = 0.65
 
-freqSigma = 0.01
+paymentSigma = 0.1
 
 
 ############# Main functions #####################
 
 def runWithPayment(time):
-    ps = [x* 1.0 /100 for x in range(1, 150)]
+    ps = np.random.lognormal(paymentMean, paymentSigma)
 
-    f = np.random.lognormal(freqMean, freqSigma)
+    fs = [x* 1.0 / 100  for x in range(1,200)]
     # random.expovariate(givenP)
     # ps = np.arange(0.0, 1.0 + 0.01, 0.01)
 
-    for i in range(len(ps)):
+    for i in range(len(fs)):
         # trial
-        print(str(i))
+        print(i)
         res = [0, 0, 0, 0, 0, 0]
         temp = []
         for k in range(num_trial):
-            temp = main(p=ps[i], freq=f, timeRun = time)
+            temp = main(p = ps, freq=fs[i], timeRun = time)
             for j in range(len(temp)):
                 res[j] += temp[j]
         for j in range(len(res)):
@@ -124,8 +124,8 @@ def runWithPayment(time):
     bobAfter = chargeFee(bob2, maxFee)
     
 
-    alicePoints = transform(getIntersections(alice1, aliceAfter, ps))
-    bobPoints = transform(getIntersections(bob0, bobAfter, ps))
+    alicePoints = transform(getIntersections(alice1, aliceAfter, fs))
+    bobPoints = transform(getIntersections(bob0, bobAfter, fs))
 
     bobxs = bobPoints[0]
     bobys = bobPoints[1]
@@ -135,23 +135,23 @@ def runWithPayment(time):
     aliceBenefit = chargeFee(alice1, aliceAfter)
     bobBenefit = chargeFee(bob0, bobAfter)
 
-    
+
     fig = plt.figure(figsize=plt.figaspect(0.5))
 
     ax = fig.add_subplot(1, 1, 1)
     
-    ax.plot(ps, bob0, "k")
-    ax.plot(ps, alice1, "r")
+    ax.plot(fs, bob0, "k")
+    ax.plot(fs, alice1, "r")
     # ax.plot(ps, bob2, "m")
     # ax.plot(ps, bob1, "k--")
     # ax.plot(ps, alice2, "c--")
-    ax.plot(ps, aliceAfter, "b-")
-    ax.plot(ps, bobAfter, "g-")
+    ax.plot(fs, aliceAfter, "b-")
+    ax.plot(fs, bobAfter, "g-")
     # ax.plot(bobxs, bobys, "go")
     
-    ax.plot(ps, aliceBenefit)
-    ax.plot(ps, bobBenefit)
-    ax.plot(ps, [0 for x in range(len(ps))], "k--")
+    ax.plot(fs, aliceBenefit)
+    ax.plot(fs, bobBenefit)
+    ax.plot(fs, [0 for x in range(len(fs))], "k--")
     ax.plot(alicexs, aliceys, "bo")
 
     trans_offset = mtransforms.offset_copy(ax.transData, fig=fig,
@@ -165,12 +165,12 @@ def runWithPayment(time):
 
 
     ax.set_title('Transferred payment size vs Cost differences after Max Fee')
-    ax.set_xlabel('Payment size')
+    ax.set_xlabel('frequency (lambda)')
     ax.set_ylabel('Cost differences')
 
     # plt.axis([0, 6, 0, 100])
     fig.legend(["bob", "alice", "alice' ", "bob'", "alice benefit", "bob benefit"])
-    fig.savefig('paysFeeBenefit.png')
+    fig.savefig('frequencyBenefit.png')
 
 
 ################ Call #####################

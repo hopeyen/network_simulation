@@ -582,6 +582,9 @@ def main(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun 
 	# return (a1+c1, b1, a2+c2, b2, a3+c3, b3, a4+ c4, b4)
 
 	# max_fee based on network 1 and 2
+	# return (a0+c0, b0, a1+c1, b1, a2+c2, b2)
+
+	# just bob
 	return (a0+c0, b0, a1+c1, b1, a2+c2, b2)
 
 

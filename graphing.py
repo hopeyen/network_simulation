@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.mlab as mlab
 import matplotlib.gridspec as gridspec
 from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
+from matplotlib.ticker import LinearLocator, FormatStrFormatter
 
 
 def Rand(start, end, num): 
