@@ -30,7 +30,7 @@ def getLowerMean(list1, list2):
     else:
         return list2
 
-def calculateMax(list1, list2):
+def calculateFee(list1, list2):
     lower = getLowerMean(list1, list2)
     higher = getHigherMean(list1, list2)
 
@@ -41,6 +41,7 @@ def calculateMax(list1, list2):
             temp.append(higher[i][j] -lower[i][j])
         ans.append(temp)
     return ans
+
 
 def chargeFee(bob, fee):
     ans = []
@@ -95,21 +96,24 @@ paymentMean = 0.1
 
 paymentSigma = 0.1
 
-psInit = 1
+psInit = 20
 
-fsInit = 1
+fsInit = 25
 
-psLen = 50
+psLen = 100
 
-fsLen = 50
+fsLen = 100
 
+psIncre = 10
 
+fsIncre = 10
 ############# Main functions #####################
 
 def runWithPayment(time):
-    ps = [x* 1.0 /2 for x in range(psInit, psInit+psLen)]
-
-    fs = [x* 1.0 /2 for x in range(fsInit, fsInit+fsLen)]
+    # 0.2 to 1.2
+    ps = [x* 1.0 /100 for x in range(20, 120)]
+    # 0.25 to 1.25
+    fs = [x* 1.0 /100 for x in range(25, 125)]
     # random.expovariate(givenP)
     # ps = np.arange(0.0, 1.0 + 0.01, 0.01)
 
@@ -133,51 +137,54 @@ def runWithPayment(time):
             for h in range(len(costs)):
                 costs[h][i][j] /= float(num_trial)
 
-
     #         # alice0         costs[0] 
     #         # bob0           costs[1] 
     #         # alice1         costs[2] 
     #         # bob1           costs[3] 
     #         # alice2         costs[4] 
     #         # bob2           costs[5] 
-    maxFee = calculateMax(costs[2], costs[4])
+    maxFee = calculateFee(costs[2], costs[4])
+    minFee = calculateFee(costs[5], costs[1])
 
     # Alice's cost increase while Bob's cost decrease by the fee charged
-    aliceAfter = payFee(costs[0], maxFee)
-    bobAfter = chargeFee(costs[5], maxFee)
+    aliceAfter_Max = payFee(costs[0], maxFee)
+    bobAfter_Max = chargeFee(costs[5], maxFee)
+    aliceAfter_Min = payFee(costs[0], minFee)
+    bobAfter_Min = chargeFee(costs[5], minFee)
     
-    Z = np.array(bobAfter)
-    U = np.array(aliceAfter)
-
-
+    # set up the plot
+    Z = np.array(bobAfter_Max)
+    U = np.array(aliceAfter_Max)
+    V = np.array(bobAfter_Min)
+    W = np.array(aliceAfter_Min)
 
     fig = plt.figure(figsize=plt.figaspect(0.5))
 
-    # first plot
-    ax = fig.add_subplot(1, 2, 1, projection='3d')
-    ax.set_xlabel('Payment size')
-    ax.set_ylabel('Frequency')
-    ax.set_zlabel('Bob cost after charging the fee')
+    titles = ['Bob after charging the maximum fee', 
+            'Alice after charging the maximum fee', 
+            'Bob after charging the minimum fee',
+            'Alice after charging the minimum fee']
+    Zs = [Z, U, V, W]
 
-    surf = ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cm.coolwarm,
-                       linewidth=0, antialiased=False)
-    # ax.set_zlim(-1.01, 1.01)
-    fig.colorbar(surf, shrink=0.5, aspect=10)
+    for i in range(0, 4):
+        ax = fig.add_subplot(2, 2, i+1, projection='3d')
+        ax.set_xlabel('Payment size')
+        ax.set_ylabel('Frequency')
+        ax.set_zlabel("benefit")
+        ax.set_title(titles[i])
+        surf = ax.plot_surface(X, Y, Zs[i], rstride=1, cstride=1, cmap=cm.coolwarm,
+                           linewidth=0, antialiased=False)
+        fig.colorbar(surf, shrink=0.5, aspect=10)
 
-    # second plot
-    ax = fig.add_subplot(1, 2, 2, projection='3d')
-    ax.set_xlabel('Payment size')
-    ax.set_ylabel('Frequency')
-    ax.set_zlabel('Alice costs after charging the fee')
+        # rotate the axes and update
+        for angle in range(0, 4):
+            for angle2 in range(0, 3):
+                ax.view_init(angle2*30, angle*90)
+                plt.draw()
+                fig.savefig('3D-3-%d%d%d.png' % (i, angle, angle2))
 
-    # plot a 3D wireframe like in the example mplot3d/wire3d_demo
-    
-    surf = ax.plot_surface(X, Y, U, rstride=1, cstride=1, cmap=cm.coolwarm,
-                       linewidth=0, antialiased=False)
-    # ax.set_zlim(-1.01, 1.01)
-    fig.colorbar(surf, shrink=0.5, aspect=10)
+    # fig.savefig('3D-3.png')
 
-    fig.savefig('3D2.png')
 
 ################ Call #####################
 

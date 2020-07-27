@@ -7,14 +7,17 @@ matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 
 class Node(object):
+	self.nodes = []
 	def __init__(self, name, network):
 		self.name = name
 		self.channels = []
 		self.payments = []
+		self.transferred = []
 		self.revenue = 0
 		self.channelCost = 0
 
 		self.network = network
+		self.nodes.append(self)
 
 
 	def __eq__(self, other):
@@ -29,6 +32,14 @@ class Node(object):
 
 	def addPayment(self, payment):
 		self.payments.append(payment)
+
+		for c in self.channels:
+			# has direct
+			if c.B == payment.reciever:
+				return
+
+
+
 		
 
 	# def updateChannelCost(self):
@@ -48,6 +59,15 @@ class Node(object):
 		for c in self.channels:
 			self.channelCost += c.cost *1.0 /2
 		return self.channelCost
+
+	def chooseTransfer(self):
+		minFeeChannel = self.channels[0]
+		for c in self.channels:
+			if (self == c.A) and (c.feeA < minFeeChannel.feeA):
+				minFeeChannel = c
+			elif (self == c.B) and (c.feeB < minFeeChannel.feeB):
+				minFeeChannel = c
+		return minFeeChannel
 
 
 
@@ -88,7 +108,6 @@ class Payment(object):
 	def setTransfer(self, payment):
 		self.transferTo = payment
 
-
 	def estimateUbd(self):
 	    network = self.sender.network
 	    return math.sqrt(2 * network.onlineTX * self.freq * self.amt / network.r)
@@ -118,10 +137,13 @@ class Channel(object):
 		self.paymentsB = []
 		self.txTimesA = []
 		self.txTimesB = []
+		self.feeA = 0
+		self.feeB = 0
 
 		self.network = network
 
 		self.cost = 0
+		# add for A and B
 		self.transferPayment = None
 
 		A.addChannel(self)
@@ -165,35 +187,7 @@ class Channel(object):
 		self.B.addPayment(payment)
 
 		payment.setChannel(self)
-
-
-	# def removePayment(self, payment):
-	# 	if payment in self.paymentsA:
-	# 		self.paymentsA.remove(payment)
 		
-	# 	elif payment in self.paymentsB:
-	# 		self.payments.remove(payment)
-
-
-	# def addTransferPayment(self, payment):
-	# 	self.addPayment(payment)
-	# 	self.transferPayment = payment
-
-
-	# def rmTransPayment(self, payment):
-	# 	self.removePayment(payment)
-	# 	self.transferPayment = None
-
-
-	# def getLifetime(self):
-	# 	return (max(sum(self.txTimesA)), sum(self.txTimesB))
-
-	# def getTxFee(self):
-	# 	return 42
-
-	# def getOppoCost(self):
-	# 	return self.transferPayment.amt - self.transferPayment.amt * (self.getLifetime() // (self.getLifetime() + self.network.r))
-
 	def setChannelSize(self, mA, mB):
 		self.mA = mA
 		self.mB = mB
@@ -297,8 +291,6 @@ class Channel(object):
 				payment.numPaid += 1
 				return True
 		return False	
-
-
 
 class Network(object):
 	# keep track of the state of the network, include structure and flow
