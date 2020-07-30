@@ -72,20 +72,6 @@ def transform(points):
     return (xs, ys)
 
 
-############## Constants and global variables ################
-
-alice0, bob0, alice1, bob1, alice2, bob2 = [], [], [], [], [], []
-
-num_trial = 500
-
-time = 50
-
-givenP = 0.5
-
-freqMean = 0.10
-
-freqSigma = 0.001
-
 
 ############# Main functions #####################
 

@@ -123,6 +123,7 @@ def runWithPayment(time):
     aliceAfter = payFee(alice0, maxFee)
     bobAfter = chargeFee(bob2, maxFee)
     
+    
 
     alicePoints = transform(getIntersections(alice1, aliceAfter, ps))
     bobPoints = transform(getIntersections(bob0, bobAfter, ps))

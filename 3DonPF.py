@@ -96,13 +96,13 @@ paymentMean = 0.1
 
 paymentSigma = 0.1
 
-psInit = 20
+psInit = 60
 
-fsInit = 25
+fsInit = 65
 
-psLen = 100
+psLen = 10
 
-fsLen = 100
+fsLen = 10
 
 psIncre = 10
 
@@ -111,9 +111,10 @@ fsIncre = 10
 
 def runWithPayment(time):
     # 0.2 to 1.2
-    ps = [x* 1.0 /100 for x in range(20, 120)]
+    ps = [x* 1.0 /100 for x in range(psInit, psInit+psLen)]
     # 0.25 to 1.25
-    fs = [x* 1.0 /100 for x in range(25, 125)]
+    fs = [x* 1.0 /100 for x in range(fsInit, fsInit+fsLen)]
+
     # random.expovariate(givenP)
     # ps = np.arange(0.0, 1.0 + 0.01, 0.01)
 
@@ -172,6 +173,7 @@ def runWithPayment(time):
         ax.set_ylabel('Frequency')
         ax.set_zlabel("benefit")
         ax.set_title(titles[i])
+        
         surf = ax.plot_surface(X, Y, Zs[i], rstride=1, cstride=1, cmap=cm.coolwarm,
                            linewidth=0, antialiased=False)
         fig.colorbar(surf, shrink=0.5, aspect=10)

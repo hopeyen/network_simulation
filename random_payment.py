@@ -28,7 +28,7 @@ def getLowerMean(list1, list2):
     else:
         return list2
 
-def calculateMax(list1, list2):
+def calculateFee(list1, list2):
     lower = getLowerMean(list1, list2)
     higher = getHigherMean(list1, list2)
 
@@ -80,8 +80,6 @@ num_trial = 200
 
 time = 50
 
-givenP = 0.5
-
 paymentMean = 0.65
 
 paymentSigma = 0.1
@@ -92,9 +90,7 @@ paymentSigma = 0.1
 def runWithPayment(time):
     ps = np.random.lognormal(paymentMean, paymentSigma)
 
-    fs = [x* 1.0 / 100  for x in range(1,200)]
-    # random.expovariate(givenP)
-    # ps = np.arange(0.0, 1.0 + 0.01, 0.01)
+    fs = [x* 1.0 / 100  for x in range(1,100)]
 
     for i in range(len(fs)):
         # trial
@@ -117,59 +113,44 @@ def runWithPayment(time):
 
     # if Bob is taking the highest fee he can, then we look at how his costs changes
     # the highest fee Bob can take is Alice's maximum difference of channel costs
-    maxFee = calculateMax(alice1, alice2)
+    maxFee = calculateFee(alice1, alice2)
+    aliceAfter_max = payFee(alice0, maxFee)
+    bobAfter_max = chargeFee(bob2, maxFee)
 
-    # Alice's cost increase while Bob's cost decrease by the fee charged
-    aliceAfter = payFee(alice0, maxFee)
-    bobAfter = chargeFee(bob2, maxFee)
-    
+    # if Bob is taking the lowest fee he can, it would be the difference between
+    # if he transfer for Alice (bob2) and if he does not (bob0=bob1) 
+    minFee = calculateFee(bob2, bob0)
+    aliceAfter_min = payFee(alice0, minFee)
+    bobAfter_min = chargeFee(bob2, minFee)
 
-    alicePoints = transform(getIntersections(alice1, aliceAfter, fs))
-    bobPoints = transform(getIntersections(bob0, bobAfter, fs))
+    # get the benefit by analyzing the costs in different networks
+    aliceBenefit_max = chargeFee(alice1, aliceAfter_max)
+    bobBenefit_max = chargeFee(bob0, bobAfter_max)
+    aliceBenefit_min = chargeFee(alice1, aliceAfter_min)
+    bobBenefit_min = chargeFee(bob0, bobAfter_min)
 
-    bobxs = bobPoints[0]
-    bobys = bobPoints[1]
-    alicexs = alicePoints[0]
-    aliceys = alicePoints[1]
 
-    aliceBenefit = chargeFee(alice1, aliceAfter)
-    bobBenefit = chargeFee(bob0, bobAfter)
-
+    titles = ['costs after max fee vs freqeuncy', 
+            'costs after min fee vs frequency']
+    Zs = [(aliceBenefit_max, bobBenefit_max), (aliceBenefit_min, bobBenefit_min)]
 
     fig = plt.figure(figsize=plt.figaspect(0.5))
 
-    ax = fig.add_subplot(1, 1, 1)
+    for i in range(0, 2):
+        ax = fig.add_subplot(1, 2, i+1)
+        ax.set_xlabel('Frequency (lambda)')
+        ax.set_ylabel('Costs/benefit ')
+        
     
-    ax.plot(fs, bob0, "k")
-    ax.plot(fs, alice1, "r")
-    # ax.plot(ps, bob2, "m")
-    # ax.plot(ps, bob1, "k--")
-    # ax.plot(ps, alice2, "c--")
-    ax.plot(fs, aliceAfter, "b-")
-    ax.plot(fs, bobAfter, "g-")
-    # ax.plot(bobxs, bobys, "go")
-    
-    ax.plot(fs, aliceBenefit)
-    ax.plot(fs, bobBenefit)
-    ax.plot(fs, [0 for x in range(len(fs))], "k--")
-    ax.plot(alicexs, aliceys, "bo")
+        ax.plot(fs, bob0, "k")
+        ax.plot(fs, alice1, "r")
+        ax.plot(fs, Zs[i][0], "b-")
+        ax.plot(fs, Zs[i][1], "g-")
+        ax.plot(fs, [0 for x in range(len(fs))], "k--")
 
-    trans_offset = mtransforms.offset_copy(ax.transData, fig=fig,
-                                       x=0.01, y=-0.30, units='inches')
-
-    for x, y in zip(bobxs, bobys):
-        plt.plot(x, y, 'go')
-        # plt.text(x, y, '%02f, %02f' % (x, y), transform=trans_offset)
-
-    fig.text(0, 0, 'Alice Points %s; Bob Points %s\n Number of trials: %d; Time of each network: %d' % (str(alicePoints), str(bobPoints), num_trial, time))
-
-
-    ax.set_title('Transferred payment size vs Cost differences after Max Fee')
-    ax.set_xlabel('frequency (lambda)')
-    ax.set_ylabel('Cost differences')
-
-    # plt.axis([0, 6, 0, 100])
-    fig.legend(["bob", "alice", "alice' ", "bob'", "alice benefit", "bob benefit"])
+        fig.text(0, 0, 'Number of trials: %d; Time of each network: %d; Freq mean: %0.2f' % (num_trial, time, freqMean))
+        ax.set_title(titles[i])
+        fig.legend(["bob", "alice", "alice' ", "bob'", "alice benefit", "bob benefit"])
     fig.savefig('frequencyBenefit.png')
 
 
