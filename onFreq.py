@@ -55,8 +55,8 @@ def getIntersections(list1, list2, ps):
     for i in range(1, len(list1)):
         if list1[i] == list2[i]:
             points.append((i, list2[i]))
-        elif ((list1[i-1] > list2[i-1]) and (list1[i] < list2[i])): 
-            # or ((list1[i-1] < list2[i-1]) and (list1[i] > list2[i]))):
+        elif (((list1[i-1] > list2[i-1]) and (list1[i] < list2[i])) 
+            or ((list1[i-1] < list2[i-1]) and (list1[i] > list2[i]))):
             points.append((ps[i], (list1[i-1]+list1[i])/2))
 
     return points
@@ -95,7 +95,7 @@ time = 50
 
 givenP = 0.5
 
-paymentMean = 0.35
+paymentMean = 1
 
 paymentSigma = 0.1
 
@@ -212,7 +212,7 @@ def runWithFreq(time):
     minFee = calculateFee(bob22, bob0)
     print(minFee)
 
-    inter = getIntersections(maxFee, minFee, ps)
+    inter = getIntersections(maxFee, minFee, fs)
 
 
     titles = ['Maximum fee and minimum fee vs frequency']

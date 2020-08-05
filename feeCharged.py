@@ -84,6 +84,23 @@ def transform(points):
 
     return (xs, ys)
 
+def getMaxFee(a0, a1):
+    return a1 - a0
+
+def getMinFee(a0, a2, b0, b2):
+    b22 = b2 + a2 - a0
+    return b22 - b0
+
+
+def getFees(ps, f, time):
+    # (a0+c0, b0, a1+c1, b1, a2+c2, b2)
+    #    a0   b0   a1    b1   a2   b2
+    temp = main(p=ps, freq=f, timeRun = time)
+    return (getMaxFee(temp[0], temp[2]), getMinFee(temp[0], temp[4], temp[1], temp[5]))
+
+
+        
+
 
 ############## Constants and global variables ################
 
@@ -103,7 +120,7 @@ freqSigma = 0.05
 ############# Main functions #####################
 
 def runWithPayment(time):
-    ps = [x* 1.0 /100 for x in range(1, 80)]
+    ps = [x* 1.0 /100 for x in range(1, 50)]
 
     f = np.random.lognormal(freqMean, freqSigma)
     # random.expovariate(givenP)
@@ -221,14 +238,13 @@ def runWithPayment(time):
         fig.legend(["maximum fee", "minimum fee"])
 
 
-
-    
-
-        
-
-
-
     fig.savefig('testIntercepts.png')
+
+
+    print("checking")
+    for pt in range(len(inter)):
+
+        print(getFees(inter[pt], freqMean, time))
 
 
 ################ Call #####################
