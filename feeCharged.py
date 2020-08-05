@@ -61,6 +61,19 @@ def getIntersections(list1, list2, ps):
 
     return points
 
+
+def getIntercepts(list, ps):
+    points = []
+
+    for i in range(1, len(list)):
+        if list[i] == 0:
+            points.append((ps[i], 0))
+        elif ((list[i-1] > 0) and (list[i] < 0)): 
+            # or ((list1[i-1] < list2[i-1]) and (list1[i] > list2[i]))):
+            points.append(((ps[i]+ps[i-1])/2, 0))
+
+    return points
+
 def transform(points):
     xs = []
     ys = []
@@ -82,15 +95,15 @@ time = 50
 
 givenP = 0.5
 
-freqMean = 0.10
+freqMean = 0.1
 
-freqSigma = 0.001
+freqSigma = 0.05
 
 
 ############# Main functions #####################
 
 def runWithPayment(time):
-    ps = [x* 1.0 /100 for x in range(50, 150)]
+    ps = [x* 1.0 /100 for x in range(1, 80)]
 
     f = np.random.lognormal(freqMean, freqSigma)
     # random.expovariate(givenP)
@@ -117,52 +130,105 @@ def runWithPayment(time):
 
     # if Bob is taking the highest fee he can, then we look at how his costs changes
     # the highest fee Bob can take is Alice's maximum difference of channel costs
-    maxFee = calculateFee(alice1, alice2)
+    maxFee = calculateFee(alice0, alice1)
+    print(maxFee)
     aliceAfter_max = payFee(alice0, maxFee)
-    bobAfter_max = chargeFee(bob2, maxFee)
 
-    # if Bob is taking the lowest fee he can, it would be the difference between
-    # if he transfer for Alice (bob2) and if he does not (bob0=bob1) 
-    minFee = calculateFee(bob2, bob0)
-    aliceAfter_min = payFee(alice0, minFee)
-    bobAfter_min = chargeFee(bob2, minFee)
+    # bob is also responsible for Alice's share of change in channels
+    # bob2'=bob2+(alice2-alice0)
+    # minFee = bob2'-bob0 = bob2+(alice2-alice0)-bob0 
+    bob22 = payFee(bob2, calculateFee(alice0, alice2))
 
-    # alicePoints = transform(getIntersections(alice1, aliceAfter, ps))
-    # bobPoints = transform(getIntersections(bob0, bobAfter, ps))
+    minFee = calculateFee(bob22, bob0)
+    print(minFee)
 
+
+
+    inter = getIntersections(maxFee, minFee, ps)
+
+    # bobAfter_max = chargeFee(payFee(bob2, calculateFee(alice0, alice2)), maxFee)
+
+    # # if Bob is taking the lowest fee he can, it would be the difference between
+    # # if he transfer for Alice (bob2) and if he does not (bob0=bob1) 
+    # minFee = calculateFee(bob2, bob0)
+    # aliceAfter_min = payFee(alice0, minFee)
+    # bobAfter_min = chargeFee(payFee(bob2, calculateFee(alice0, alice2)), minFee)
+
+
+    # # get the benefit by analyzing the costs in different networks
+    # aliceBenefit_max = payFee(aliceAfter_max, alice1)
+    # bobBenefit_max = payFee(bobAfter_max, bob0)
+    # aliceBenefit_min = payFee(aliceAfter_min, alice1)
+    # bobBenefit_min = payFee(bobAfter_min, bob0)
+
+
+    # alicePoints = transform(getIntersections(alice1, aliceAfter_max, ps))
+    # bobPoints = transform(getIntersections(bob0, bobAfter_max, ps))
+    
     # bobxs = bobPoints[0]
     # bobys = bobPoints[1]
     # alicexs = alicePoints[0]
     # aliceys = alicePoints[1]
 
-    # get the benefit by analyzing the costs in different networks
-    aliceBenefit_max = chargeFee(alice1, aliceAfter_max)
-    bobBenefit_max = chargeFee(bob0, bobAfter_max)
-    aliceBenefit_min = chargeFee(alice1, aliceAfter_min)
-    bobBenefit_min = chargeFee(bob0, bobAfter_min)
+    # BobInter = [getIntercepts(bobBenefit_max, ps)]
+    # AliceInter = [getIntercepts(aliceBenefit_max, ps), getIntercepts(aliceBenefit_min, ps)]
 
-    titles = ['costs after max fee vs payment size', 
-            'costs after min fee vs payment size']
-    Zs = [(aliceBenefit_max, bobBenefit_max), (aliceBenefit_min, bobBenefit_min)]
+
+
+
+    titles = ['Maximum fee and minimum fee vs payment size', 
+            'benefit after min fee vs payment size']
+    # Zs = [(aliceBenefit_max, bobBenefit_max), (aliceBenefit_min, bobBenefit_min)]
+    xlabels = ['Payment size', 'frequency (lambda)']
 
     fig = plt.figure(figsize=plt.figaspect(0.5))
 
-    for i in range(0, 2):
-        ax = fig.add_subplot(1, 2, i+1)
-        ax.set_xlabel('Payment size')
-        ax.set_ylabel('Costs/benefit ')
-        
-    
-        ax.plot(ps, bob0, "k")
-        ax.plot(ps, alice1, "r")
-        ax.plot(ps, Zs[i][0], "b-")
-        ax.plot(ps, Zs[i][1], "g-")
-        ax.plot(ps, [0 for x in range(len(ps))], "k--")
+    for i in range(0, 1):
+        ax = fig.add_subplot(1, 1, i+1)
+        ax.set_xlabel(xlabels[i])
+        ax.set_ylabel('fee ')
 
-        fig.text(0, 0, 'Number of trials: %d; Time of each network: %d; Freq mean: %0.2f' % (num_trial, time, freqMean))
+        # ax.plot(ps, bob0, "k--")
+        # # ax.plot(ps, alice0, "b--")
+        # ax.plot(ps, bob1)
+        # # ax.plot(ps, alice1)
+        # ax.plot(ps, bob2)
+        # ax.plot(ps, payFee(bob2, calculateFee(alice0, alice2)))
+        ax.plot(ps, maxFee, "k--")
+        ax.plot(ps, minFee, "r-.")
+        # ax.plot(ps, alice2)
+        
+        # ax.plot(ps, Zs[i][0])
+        # ax.plot(ps, Zs[i][1])
+        # ax.plot(ps, [0 for x in range(len(ps))])
+
+        for pt in range(len(inter)):
+            label = '{:.3f}'.format(inter[pt][0])
+            ax.annotate(label, (inter[pt][0], inter[pt][1]),
+                textcoords="offset points",
+                xytext = (2,2),
+                rotation=45)
+        # for pt in range(len(AliceInter[i])):
+        #     label = '{:.3f}'.format(AliceInter[i][pt][0])
+        #     # AliceInter[i][pt][0]
+        #     ax.annotate(label, (0, 0),
+        #         textcoords="offset points",
+        #         xytext = (2,2),
+        #         rotation=45)
+
+        fig.text(0, 0, 'Trials: %d; Time: %d; Freq mean: %0.2f' % (num_trial, time, freqMean))
         ax.set_title(titles[i])
-        fig.legend(["bob", "alice", "alice' ", "bob'", "alice benefit", "bob benefit"])
-    fig.savefig('OnPsize.png')
+        fig.legend(["maximum fee", "minimum fee"])
+
+
+
+    
+
+        
+
+
+
+    fig.savefig('testIntercepts.png')
 
 
 ################ Call #####################

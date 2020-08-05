@@ -144,14 +144,39 @@ def runWithPayment(time):
     #         # bob1           costs[3] 
     #         # alice2         costs[4] 
     #         # bob2           costs[5] 
-    maxFee = calculateFee(costs[2], costs[4])
-    minFee = calculateFee(costs[5], costs[1])
+    # maxFee = calculateFee(costs[2], costs[0]) #4
+    # minFee = calculateFee(costs[5], costs[1])
+
+    maxFee = calculateFee(costs[0], costs[2])
+    print(maxFee)
+
+    # bob is also responsible for Alice's share of change in channels
+    # bob2'=bob2+(alice2-alice0)
+    # minFee = bob2'-bob0 = bob2+(alice2-alice0)-bob0 
+    bob22 = payFee(costs[5], calculateFee(costs[0], costs[4]))
+
+    minFee = calculateFee(bob22, costs[1])
+    print(minFee)
+
+
+
+    inter = getIntersections(maxFee, minFee, ps)
+
+
+
+
 
     # Alice's cost increase while Bob's cost decrease by the fee charged
-    aliceAfter_Max = payFee(costs[0], maxFee)
-    bobAfter_Max = chargeFee(costs[5], maxFee)
-    aliceAfter_Min = payFee(costs[0], minFee)
-    bobAfter_Min = chargeFee(costs[5], minFee)
+    # now compare the costs. Bob compare with no transfer, Alice compare with direct channel
+    aliceAfter_Max = chargeFee((payFee(costs[0], maxFee)), costs[2])
+    bobAfter_Max = chargeFee((chargeFee(costs[5], maxFee)), costs[5]) # 0
+    aliceAfter_Min = chargeFee((payFee(costs[0], minFee)), costs[2])
+    bobAfter_Min = chargeFee((chargeFee(costs[5], minFee)), costs[5])
+
+    aliceBenefit_max = payFee(aliceAfter_Max, costs[2])
+    bobBenefit_max = payFee(bobAfter_max, bob2)
+    aliceBenefit_min = payFee(aliceAfter_min, alice1)
+    bobBenefit_min = payFee(bobAfter_min, bob2)
     
     # set up the plot
     Z = np.array(bobAfter_Max)
@@ -161,10 +186,10 @@ def runWithPayment(time):
 
     fig = plt.figure(figsize=plt.figaspect(0.5))
 
-    titles = ['Bob after charging the maximum fee', 
-            'Alice after charging the maximum fee', 
-            'Bob after charging the minimum fee',
-            'Alice after charging the minimum fee']
+    titles = ['Bob after charging maximum fee', 
+            'Alice after charging maximum fee', 
+            'Bob after charging minimum fee',
+            'Alice after charging minimum fee']
     Zs = [Z, U, V, W]
 
     for i in range(0, 4):

@@ -147,8 +147,9 @@ class Channel(object):
 	    	and (self.B == other.B) and (self.network == other.network))
 
 	def __repr__(self):
-	    return ("%s has balance %f, %s has balance %f" 
-	    	    	% (self.A, self.balanceA, self.B, self.balanceB))
+	    # return ("%s has balance %f, %s has balance %f" 
+	    # 	    	% (self.A, self.balanceA, self.B, self.balanceB))
+	    return ("%s and %s with %f" % (self.A, self.B, self.cost))
 
 	def getChannelCost(self):
 		# # simplied version of calculating the cost
@@ -355,7 +356,7 @@ class Network(object):
 		# the payment that takes the smallest time should be processed first
 		# and when it has been processed, all other payments' interval decrement by the interval of the processed payment
 		# and the processed payment has a new interval that gets put into the timeline
-
+		
 		for c in self.channels:
 			c.optimizeSize()
 
@@ -397,13 +398,15 @@ class Network(object):
 					p.nextTime -= errorTime
 
 		# self.printSummary()
+
+		# self.printSummary()
 		# print(self.history)
 		# for p in self.payments:
 		# 	print([p, p.numPaid])
 			
 	def printSummary(self):
-		for c in self.channels:
-			print([c.A, c.B, c.mA, c.mB])
+		for n in self.nodes:
+			print(n.name + str(n.channels))
 
 	def getTotalCost(self):
 		s = 0
