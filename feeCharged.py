@@ -120,7 +120,7 @@ freqSigma = 0.0001
 ############# Main functions #####################
 
 def runWithPayment(time):
-    ps = [x* 1.0 /100 for x in range(50, 52)]
+    ps = [x* 2.0 /10 for x in range(100, 200)]
 
     for i in range(len(ps)):
         # trial

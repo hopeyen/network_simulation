@@ -77,17 +77,6 @@ def getIntersections(list1, list2, ps):
 
     return points
 
-def transform(points):
-    xs = []
-    ys = []
-
-    for i in points:
-        xs.append(i[0])
-        ys.append(i[1])
-
-    return (xs, ys)
-
-
 def getIntercepts(list, ps):
     points = []
 
@@ -122,8 +111,8 @@ def getFees(ps, f, time):
 ############# Main functions #####################
 
 def runWithFreq(time):
-    fs = [x* 1.0 /100 for x in range(150, 152)]
-    print(fs)
+    fs = [x* 2.0 /1 for x in range(1, 50)]
+    print("fs %f to %f" %(fs[0], fs[-1]))
 
     for i in range(len(fs)):
         # trial

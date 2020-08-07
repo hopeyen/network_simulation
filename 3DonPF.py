@@ -90,7 +90,7 @@ def transform(points):
 
 num_trial = 10
 
-time = 2
+time = 50
 
 givenP = 0.5
 
@@ -147,6 +147,7 @@ def runWithPayment(time):
     #         # alice2         costs[4] 
     #         # bob2           costs[5] 
 
+    # print(costs)
     maxFee = chargeFee(costs[2], costs[0])
     
     # aliceAfter_max = payFee(alice0, maxFee)
@@ -159,8 +160,8 @@ def runWithPayment(time):
     Z = np.array(maxFee)
     U = np.array(minFee)
 
-    print(maxFee)
-    print(minFee)
+    # print(maxFee)
+    # print(minFee)
 
     # returns a list of (ps, fs, pt)
     inter = getIntersections(maxFee, minFee, ps, fs)
@@ -185,6 +186,8 @@ def runWithPayment(time):
         ax.set_ylabel('Frequency')
         ax.set_zlabel("Channel Costs")
         ax.set_title(titles_users[i])
+        ax.view_init(azim=0, elev=90)
+
         Z = np.array(costs[i])
         
         surf = ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cm.coolwarm,
@@ -192,27 +195,36 @@ def runWithPayment(time):
         fig.colorbar(surf, shrink=0.5, aspect=10)
     fig.savefig('3node_pf_users.png')
 
+
+    fig2 = plt.figure(figsize=plt.figaspect(0.5))
     for i in range(0, 2):
-        ax = fig.add_subplot(plotsize, 2, i+1, projection='3d')
+        ax = fig2.add_subplot(plotsize, 2, i+1, projection='3d')
         ax.set_xlabel('Payment size')
         ax.set_ylabel('Frequency')
         ax.set_zlabel("Fee Bound")
         ax.set_title(titles[i])
+        ax.view_init(azim=0, elev=90)        
         
         surf = ax.plot_surface(X, Y, Zs[i], rstride=1, cstride=1, cmap=cm.coolwarm,
                            linewidth=0, antialiased=False)
-        fig.colorbar(surf, shrink=0.5, aspect=10)
+        fig2.colorbar(surf, shrink=0.5, aspect=10)
 
+    fig2.savefig('3node_pf.png')
+
+
+    fig3 = plt.figure(figsize=plt.figaspect(0.5))
                         
     if (len(inter) != 0):
-        ax = fig.add_subplot(plotsize, 2, 3, projection='3d')
+        ax = fig3.add_subplot(plotsize, 2, 3, projection='3d')
         ax.set_xlabel('Payment size')
         ax.set_ylabel('Frequency')
         ax.set_zlabel("Fee Bound")
         ax.set_title("Intersection points")
+        ax.view_init(azim=0, elev=90)
+
         ax.scatter(inter[0], inter[1], inter[2], marker='o')
 
-    fig.savefig('3node_pf.png')
+    fig3.savefig('3node_pf_inter.png')
 
 
 ################ Call #####################
