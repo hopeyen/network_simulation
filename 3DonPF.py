@@ -8,6 +8,7 @@ import matplotlib.mlab as mlab
 import matplotlib.gridspec as gridspec
 import matplotlib.transforms as mtransforms
 from mpl_toolkits.mplot3d.axes3d import Axes3D
+from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 
 ############ Helper functions ################
@@ -43,35 +44,36 @@ def calculateFee(list1, list2):
     return ans
 
 
-def chargeFee(bob, fee):
+def chargeFee(list, fee):
     ans = []
     for i in range(len(fee)):
         temp = []
         for j in range(len(fee[i])):
-            temp.append(bob[i][j] - fee[i][j])
+            temp.append(list[i][j] - fee[i][j])
         ans.append(temp)
     return ans
 
-def payFee(alice, fee):
+def payFee(list, fee):
     ans = []
     for i in range(len(fee)):
         temp = []
         for j in range(len(fee[i])):
-            temp.append(alice[i][j] + fee[i][j])
+            temp.append(list[i][j] + fee[i][j])
         ans.append(temp)
     return ans
 
-# def getIntersections(list1, list2, ps):
-#     points = []
+def getIntersections(list1, list2, ps, fs):
+    points = []
 
-#     for i in range(1, len(list1)):
-#         if list1[i] == list2[i]:
-#             points.append((i, list2[i]))
-#         elif ((list1[i-1] > list2[i-1]) and (list1[i] < list2[i])): 
-#             # or ((list1[i-1] < list2[i-1]) and (list1[i] > list2[i]))):
-#             points.append((ps[i], (list1[i-1]+list1[i])/2))
+    for i in range(1, len(list1)):
+        for j in range(1, len(list1[i])):
+            if list1[i][j] == list2[i][j]:
+                points.append([ps[i], fs[j], list2[i][j]])
+            elif (((list1[i][j-1] > list2[i][j-1]) and (list1[i][j] < list2[i][j]))
+                or ((list1[i][j-1] < list2[i][j-1]) and (list1[i][j] > list2[i][j]))):
+                points.append([ps[i], fs[j], (list1[i][j-1]+list1[i][j])/2])
 
-#     return points
+    return points
 
 def transform(points):
     xs = []
@@ -96,13 +98,13 @@ paymentMean = 0.1
 
 paymentSigma = 0.1
 
-psInit = 60
+psInit = 1
 
-fsInit = 65
+fsInit = 50
 
-psLen = 10
+psLen = 100
 
-fsLen = 10
+fsLen = 100
 
 psIncre = 10
 
@@ -144,73 +146,73 @@ def runWithPayment(time):
     #         # bob1           costs[3] 
     #         # alice2         costs[4] 
     #         # bob2           costs[5] 
-    # maxFee = calculateFee(costs[2], costs[0]) #4
-    # minFee = calculateFee(costs[5], costs[1])
 
-    maxFee = calculateFee(costs[0], costs[2])
-    print(maxFee)
+    maxFee = chargeFee(costs[2], costs[0])
+    
+    # aliceAfter_max = payFee(alice0, maxFee)
 
-    # bob is also responsible for Alice's share of change in channels
     # bob2'=bob2+(alice2-alice0)
     # minFee = bob2'-bob0 = bob2+(alice2-alice0)-bob0 
-    bob22 = payFee(costs[5], calculateFee(costs[0], costs[4]))
+    bob22 = payFee(costs[5], chargeFee(costs[4], costs[0]))
+    minFee = chargeFee(bob22, costs[1])
 
-    minFee = calculateFee(bob22, costs[1])
+    Z = np.array(maxFee)
+    U = np.array(minFee)
+
+    print(maxFee)
     print(minFee)
 
+    # returns a list of (ps, fs, pt)
+    inter = getIntersections(maxFee, minFee, ps, fs)
+    inter = np.transpose(np.array(inter))
 
-
-    inter = getIntersections(maxFee, minFee, ps)
-
-
-
-
-
-    # Alice's cost increase while Bob's cost decrease by the fee charged
-    # now compare the costs. Bob compare with no transfer, Alice compare with direct channel
-    aliceAfter_Max = chargeFee((payFee(costs[0], maxFee)), costs[2])
-    bobAfter_Max = chargeFee((chargeFee(costs[5], maxFee)), costs[5]) # 0
-    aliceAfter_Min = chargeFee((payFee(costs[0], minFee)), costs[2])
-    bobAfter_Min = chargeFee((chargeFee(costs[5], minFee)), costs[5])
-
-    aliceBenefit_max = payFee(aliceAfter_Max, costs[2])
-    bobBenefit_max = payFee(bobAfter_max, bob2)
-    aliceBenefit_min = payFee(aliceAfter_min, alice1)
-    bobBenefit_min = payFee(bobAfter_min, bob2)
-    
+    plotsize = 1
+    if len(inter) != 0:
+        plotsize = 2
     # set up the plot
-    Z = np.array(bobAfter_Max)
-    U = np.array(aliceAfter_Max)
-    V = np.array(bobAfter_Min)
-    W = np.array(aliceAfter_Min)
+    
 
     fig = plt.figure(figsize=plt.figaspect(0.5))
 
-    titles = ['Bob after charging maximum fee', 
-            'Alice after charging maximum fee', 
-            'Bob after charging minimum fee',
-            'Alice after charging minimum fee']
-    Zs = [Z, U, V, W]
+    titles = ['Payment vs Frequency\n vs Maximum fee bound', 
+            'Payment vs Frequency\n vs Minimum fee bound']
+    Zs = [Z, U]
 
-    for i in range(0, 4):
-        ax = fig.add_subplot(2, 2, i+1, projection='3d')
+    titles_users = ['alice0', 'bob0', 'alice1', 'bob1', 'alice2', 'bob2']
+    for i in range(0,6):
+        ax = fig.add_subplot(2, 3, i+1, projection='3d')
         ax.set_xlabel('Payment size')
         ax.set_ylabel('Frequency')
-        ax.set_zlabel("benefit")
+        ax.set_zlabel("Channel Costs")
+        ax.set_title(titles_users[i])
+        Z = np.array(costs[i])
+        
+        surf = ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cm.coolwarm,
+                           linewidth=0, antialiased=False)
+        fig.colorbar(surf, shrink=0.5, aspect=10)
+    fig.savefig('3node_pf_users.png')
+
+    for i in range(0, 2):
+        ax = fig.add_subplot(plotsize, 2, i+1, projection='3d')
+        ax.set_xlabel('Payment size')
+        ax.set_ylabel('Frequency')
+        ax.set_zlabel("Fee Bound")
         ax.set_title(titles[i])
         
         surf = ax.plot_surface(X, Y, Zs[i], rstride=1, cstride=1, cmap=cm.coolwarm,
                            linewidth=0, antialiased=False)
         fig.colorbar(surf, shrink=0.5, aspect=10)
 
-        # rotate the axes and update
-        for angle in range(0, 4):
-            for angle2 in range(0, 3):
-                ax.view_init(angle2*30, angle*90)
-                plt.draw()
-                fig.savefig('3D-3-%d%d%d.png' % (i, angle, angle2))
+                        
+    if (len(inter) != 0):
+        ax = fig.add_subplot(plotsize, 2, 3, projection='3d')
+        ax.set_xlabel('Payment size')
+        ax.set_ylabel('Frequency')
+        ax.set_zlabel("Fee Bound")
+        ax.set_title("Intersection points")
+        ax.scatter(inter[0], inter[1], inter[2], marker='o')
 
-    # fig.savefig('3D-3.png')
+    fig.savefig('3node_pf.png')
 
 
 ################ Call #####################

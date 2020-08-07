@@ -55,22 +55,9 @@ def getIntersections(list1, list2, ps):
     for i in range(1, len(list1)):
         if list1[i] == list2[i]:
             points.append((i, list2[i]))
-        elif ((list1[i-1] > list2[i-1]) and (list1[i] < list2[i])): 
-            # or ((list1[i-1] < list2[i-1]) and (list1[i] > list2[i]))):
+        elif (((list1[i-1] > list2[i-1]) and (list1[i] < list2[i])) 
+            or ((list1[i-1] < list2[i-1]) and (list1[i] > list2[i]))):
             points.append((ps[i], (list1[i-1]+list1[i])/2))
-
-    return points
-
-
-def getIntercepts(list, ps):
-    points = []
-
-    for i in range(1, len(list)):
-        if list[i] == 0:
-            points.append((ps[i], 0))
-        elif ((list[i-1] > 0) and (list[i] < 0)): 
-            # or ((list1[i-1] < list2[i-1]) and (list1[i] > list2[i]))):
-            points.append(((ps[i]+ps[i-1])/2, 0))
 
     return points
 
@@ -83,6 +70,21 @@ def transform(points):
         ys.append(i[1])
 
     return (xs, ys)
+
+
+def getIntercepts(list, ps):
+    points = []
+
+    for i in range(1, len(list)):
+        if list[i] == 0:
+            points.append((ps[i], 0))
+        elif (((list[i-1] > 0) and (list[i] < 0))
+            or (((list[i-1] < 0) and (list[i] > 0)))):
+            points.append(((ps[i]+ps[i-1])/2, 0))
+
+    return points
+
+
 
 def getMaxFee(a0, a1):
     return a1 - a0
@@ -106,25 +108,19 @@ def getFees(ps, f, time):
 
 alice0, bob0, alice1, bob1, alice2, bob2 = [], [], [], [], [], []
 
-num_trial = 500
+num_trial = 200
 
 time = 50
 
-givenP = 0.5
+freqMean = 1.5
 
-freqMean = 0.1
-
-freqSigma = 0.05
+freqSigma = 0.0001
 
 
 ############# Main functions #####################
 
 def runWithPayment(time):
-    ps = [x* 1.0 /100 for x in range(1, 50)]
-
-    f = np.random.lognormal(freqMean, freqSigma)
-    # random.expovariate(givenP)
-    # ps = np.arange(0.0, 1.0 + 0.01, 0.01)
+    ps = [x* 1.0 /100 for x in range(50, 52)]
 
     for i in range(len(ps)):
         # trial
@@ -132,6 +128,7 @@ def runWithPayment(time):
         res = [0, 0, 0, 0, 0, 0]
         temp = []
         for k in range(num_trial):
+            f = np.random.lognormal(freqMean, freqSigma)
             temp = main(p=ps[i], freq=f, timeRun = time)
             for j in range(len(temp)):
                 res[j] += temp[j]
@@ -147,51 +144,48 @@ def runWithPayment(time):
 
     # if Bob is taking the highest fee he can, then we look at how his costs changes
     # the highest fee Bob can take is Alice's maximum difference of channel costs
-    maxFee = calculateFee(alice0, alice1)
-    print(maxFee)
-    aliceAfter_max = payFee(alice0, maxFee)
+    maxFee = chargeFee(alice1, alice0)
+    
+    # aliceAfter_max = payFee(alice0, maxFee)
 
-    # bob is also responsible for Alice's share of change in channels
     # bob2'=bob2+(alice2-alice0)
     # minFee = bob2'-bob0 = bob2+(alice2-alice0)-bob0 
-    bob22 = payFee(bob2, calculateFee(alice0, alice2))
+    bob22 = payFee(bob2, chargeFee(alice2, alice0))
 
-    minFee = calculateFee(bob22, bob0)
+    minFee = chargeFee(bob22, bob0)
+    print("alice OG")
+    print(alice0)
+    print("alice1")
+    print(alice1)
+    print("alice2")
+    print(alice2)
+    print("bob OG")
+    print(bob0)
+    print("bob1")
+    print(bob1)
+    print("bob2")
+    print(bob2)
+    print("\n")
+
+    print("max fee")
+    print(maxFee)
+    print("\n")
+
+    print("alice escapes")
+    print(chargeFee(alice2, alice0))
+    print("Bob22")
+    print(bob22)
+    print("min fee")
     print(minFee)
+
+
+    print("max min diff" + str(chargeFee(maxFee, minFee)))
+    print("param F " + str(freqMean))
+    
 
 
 
     inter = getIntersections(maxFee, minFee, ps)
-
-    # bobAfter_max = chargeFee(payFee(bob2, calculateFee(alice0, alice2)), maxFee)
-
-    # # if Bob is taking the lowest fee he can, it would be the difference between
-    # # if he transfer for Alice (bob2) and if he does not (bob0=bob1) 
-    # minFee = calculateFee(bob2, bob0)
-    # aliceAfter_min = payFee(alice0, minFee)
-    # bobAfter_min = chargeFee(payFee(bob2, calculateFee(alice0, alice2)), minFee)
-
-
-    # # get the benefit by analyzing the costs in different networks
-    # aliceBenefit_max = payFee(aliceAfter_max, alice1)
-    # bobBenefit_max = payFee(bobAfter_max, bob0)
-    # aliceBenefit_min = payFee(aliceAfter_min, alice1)
-    # bobBenefit_min = payFee(bobAfter_min, bob0)
-
-
-    # alicePoints = transform(getIntersections(alice1, aliceAfter_max, ps))
-    # bobPoints = transform(getIntersections(bob0, bobAfter_max, ps))
-    
-    # bobxs = bobPoints[0]
-    # bobys = bobPoints[1]
-    # alicexs = alicePoints[0]
-    # aliceys = alicePoints[1]
-
-    # BobInter = [getIntercepts(bobBenefit_max, ps)]
-    # AliceInter = [getIntercepts(aliceBenefit_max, ps), getIntercepts(aliceBenefit_min, ps)]
-
-
-
 
     titles = ['Maximum fee and minimum fee vs payment size', 
             'benefit after min fee vs payment size']
@@ -205,37 +199,21 @@ def runWithPayment(time):
         ax.set_xlabel(xlabels[i])
         ax.set_ylabel('fee ')
 
-        # ax.plot(ps, bob0, "k--")
-        # # ax.plot(ps, alice0, "b--")
-        # ax.plot(ps, bob1)
-        # # ax.plot(ps, alice1)
-        # ax.plot(ps, bob2)
-        # ax.plot(ps, payFee(bob2, calculateFee(alice0, alice2)))
         ax.plot(ps, maxFee, "k--")
         ax.plot(ps, minFee, "r-.")
-        # ax.plot(ps, alice2)
         
-        # ax.plot(ps, Zs[i][0])
-        # ax.plot(ps, Zs[i][1])
-        # ax.plot(ps, [0 for x in range(len(ps))])
 
         for pt in range(len(inter)):
-            label = '{:.3f}'.format(inter[pt][0])
+            label = '({:.3f}, {:.3f})'.format(inter[pt][0], inter[pt][1])
             ax.annotate(label, (inter[pt][0], inter[pt][1]),
                 textcoords="offset points",
                 xytext = (2,2),
                 rotation=45)
-        # for pt in range(len(AliceInter[i])):
-        #     label = '{:.3f}'.format(AliceInter[i][pt][0])
-        #     # AliceInter[i][pt][0]
-        #     ax.annotate(label, (0, 0),
-        #         textcoords="offset points",
-        #         xytext = (2,2),
-        #         rotation=45)
 
         fig.text(0, 0, 'Trials: %d; Time: %d; Freq mean: %0.2f' % (num_trial, time, freqMean))
         ax.set_title(titles[i])
         fig.legend(["maximum fee", "minimum fee"])
+        # fig.legend(["1", "2", "3", "4", "5", "6"])
 
 
     fig.savefig('testIntercepts.png')
@@ -243,11 +221,24 @@ def runWithPayment(time):
 
     print("checking")
     for pt in range(len(inter)):
+        print(inter[pt])
+        print("gives")
 
-        print(getFees(inter[pt], freqMean, time))
+        print(getFees(inter[pt][0], freqMean, time))
+
+    # print("mannual")
+    # res = [[],[]]
+    # for i in range(100):
+    #     tmp = getFees(0.3, 0.1, time)
+    #     res[0].append(tmp[0])
+    #     res[1].append(tmp[1])
+    # print(sum(res[0]), sum(res[1]))
 
 
 ################ Call #####################
 
 runWithPayment(time)
 # runWithFreq()
+
+# getFees(0.3, 0.1, time)
+

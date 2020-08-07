@@ -1,4 +1,4 @@
-import simulation_1 
+import simulation_1
 import random
 import matplotlib
 matplotlib.use('Agg')
@@ -7,46 +7,30 @@ import numpy as np
 import matplotlib.mlab as mlab
 import matplotlib.gridspec as gridspec
 import matplotlib.transforms as mtransforms
-from mpl_toolkits.mplot3d.axes3d import Axes3D
-from matplotlib import cm
-import copy
-import helpersMatrix
+
+
 
 
 ############## Constants and global variables ################
 
-# network
+alice0, bob0, alice1, bob1, alice2, bob2 = [], [], [], [], [], []
 
-num_trial = 100
+num_trial = 1
 
-time = 100
+time = 50
 
-# payments
+givenP = 0.5
 
-largePayment = 1
+largeFrequency = 1.0
 
-psInit = 500
+largePayments = 1
 
-psLen = 10
+littleP = 0.5
 
-psdivision = 1000
-
-psmultiply = 1.0
-
-# frequency 
-
-largeFrequency = 1
-
-fsInit = 1
-
-fsLen = 10
-
-fsdivision = 1.0
-
-fsmultiply = 1.0
+littleF = 1.5
 
 
-############### Set up ###################
+############ Helper functions ################
 
 def networkStar(p, freq, onlineTX, onlineTXTime, r, timeRun):
     # a star / fork network
@@ -542,16 +526,73 @@ def graphPF_Cycle(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01,
     fig.text(0, 0, 'trials: %d; Time: %d; psdiv: %d; psmulti: %f; fsdiv: %d; fsmulti: %f' % (num_trial, time, psdivision, psmultiply, fsmultiply, fsdivision))
     fig.savefig('4node_fee_cycle.png')
 
+
+############# Main functions #####################
+
+def run(time):
+    
+        # trial
+        
+    temp = []
+    temp = networkOG(littleP, littleF, onlineTX=5, onlineTXTime=3, r=0.01, timeRun=time)
+    alice0.append(temp[0])
+    bob0.append(temp[1])
+    
+    temp = networkDirectAC(littleP, littleF, onlineTX=5, onlineTXTime=3, r=0.01, timeRun=time)
+    alice1.append(temp[0])
+    bob1.append(temp[1])
+
+    temp = networktransferB(littleP, littleF, onlineTX=5, onlineTXTime=3, r=0.01, timeRun=time)
+    alice2.append(temp[0])
+    bob2.append(temp[1])
+
+    # if Bob is taking the highest fee he can, then we look at how his costs changes
+    # the highest fee Bob can take is Alice's maximum difference of channel costs
+    maxFee = chargeFee(alice1, alice0)
+    
+    # aliceAfter_max = payFee(alice0, maxFee)
+
+    # bob2'=bob2+(alice2-alice0)
+    # minFee = bob2'-bob0 = bob2+(alice2-alice0)-bob0 
+    bob22 = payFee(bob2, chargeFee(alice2, alice0))
+
+    minFee = chargeFee(bob22, bob0)
+
+    print("alice OG")
+    print(alice0)
+    print("alice1")
+    print(alice1)
+    print("alice2")
+    print(alice2)
+    print("bob OG")
+    print(bob0)
+    print("bob1")
+    print(bob1)
+    print("bob2")
+    print(bob2)
+    print("\n")
+
+    print("max fee")
+    print(maxFee)
+    print("\n")
+
+    print("alice escapes")
+    print(chargeFee(alice2, alice0))
+    print("Bob22")
+    print(bob22)
+    print("min fee")
+    print(minFee)
+
+    print("maxfee " + str(maxFee) + "; minfee " + str(minFee))
+    print("param pay %f ; freq %f" % (littleP, littleF))
+
+
+
+
 ################ Call #####################
 
+run(time)
+# runWithFreq()
 
+# getFees(0.3, 0.1, time)
 
-# graphPF_Star(time)
-graphPF_Star2(time)
-# graphPF_Cycle(time)
-
-
-# network flow
-# Star: A->B, B->C, C->D, B->D, A->D
-# Cycle: A->B, B->C, C->D, A->D
-# Star2: A->B, B->C, A->D

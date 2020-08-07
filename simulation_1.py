@@ -15,13 +15,14 @@ class Node(object):
 		self.channelCost = 0
 
 		self.network = network
+		network.nodes.append(self)
 
 
 	def __eq__(self, other):
 	    return (isinstance(other, Node) and (self.name == other.name))
 
 	def __repr__(self):
-	    return "%s" % (self.name)
+	    return "%s with cost of %f" % (self.name, self.getChCostTotal())
 
 
 	def addChannel(self, channel):
@@ -64,8 +65,10 @@ class Payment(object):
 		self.channel = None
 		self.transferTo = None
 		self.fee = 0
+		self.numProcessed = 0
 		
 		Payment.payments.append(self)
+
 		# self.findRoute()
 
 	def __eq__(self, other):
@@ -73,11 +76,11 @@ class Payment(object):
 	    	and (self.amt == other.amt))
 
 	def __repr__(self):
-	    return ("%s sends %f to %s" 
-	    	    	% (self.sender, self.amt, self.reciever))
+	    return ("%s sends %f to %s at rate %f, num processed: %d" 
+	    	    	% (self.sender, self.amt, self.reciever, self.freq, self.numProcessed))
 
 	def nextPaymentTime(self):
-		self.nextTime = random.expovariate(self.freq)
+		self.nextTime = random.expovariate(1/self.freq)
 		# self.txTimes.append(self.nextTime)
 		self.numPaid += 1
 		return self.nextTime
@@ -119,16 +122,17 @@ class Payment(object):
 
 class Channel(object):
 	channels = []
-	def __init__(self, A, B, mA, mB, network):
+	def __init__(self, A, B, network):
 		# super().__init__(A, B, network)
 		self.A = A
 		self.B = B
-		self.mA = mA
-		self.mB = mB
+		self.mA = 0
+		self.mB = 0
 		self.balanceA = 0
 		self.balanceB = 0
 		self.paymentsA = []
 		self.paymentsB = []
+		self.numReopen = 0
 		# self.txTimesA = []
 		# self.txTimesB = []
 
@@ -141,6 +145,7 @@ class Channel(object):
 		B.addChannel(self)		
 
 		Channel.channels.append(self)
+		network.channels.append(self)
 
 	def __eq__(self, other):
 	    return (isinstance(other, Channel) and (self.A == other.A)
@@ -149,17 +154,11 @@ class Channel(object):
 	def __repr__(self):
 	    # return ("%s has balance %f, %s has balance %f" 
 	    # 	    	% (self.A, self.balanceA, self.B, self.balanceB))
-	    return ("%s and %s with %f" % (self.A, self.B, self.cost))
+	    return ("%s and %s with cost %f, reopens %d times\n -- average frequencies (%f, %f) \n" 
+	    	% (self.A, self.B, self.cost, self.numReopen, self.avergeFreq(self.paymentsA), self.avergeFreq(self.paymentsB))
+	    	+ str(self.paymentsA))
 
 	def getChannelCost(self):
-		# # simplied version of calculating the cost
-		# freq = 0
-		# for p in self.paymentsA:
-		# 	freq += p.freq
-		# for p in self.paymentsB:
-		# 	freq -= p.freq
-		# freq = abs(freq)
-		# self.cost = 3* ((2* network.onlineTX * freq / network.r)**(1.0/3))
 		return self.cost
 
 	def updateCost(self):
@@ -167,18 +166,22 @@ class Channel(object):
 		self.cost += self.network.onlineTX * math.exp(-1 * self.network.r * (self.network.totalTime - self.network.timeLeft))
 
 	def addPayment(self, payment):
-		# print("add payment in  " + payment.sender.name + " to " + payment.reciever.name)
+		# print("add payment in channel " + payment.sender.name + " to " + payment.reciever.name + ", p: %f; f: %f" %(payment.amt, payment.freq))
 		if payment.sender == self.A:
+			# print("addPaymentA")
 			self.paymentsA.append(payment)
 
 		elif payment.sender == self.B:
+			# print("addPaymentB")
 			self.paymentsB.append(payment)
+
 		
 
 		self.A.addPayment(payment)
 		self.B.addPayment(payment)
 
 		payment.setChannel(self)
+		self.optimizeSize()
 
 
 	def addPaymentList(self, payments):
@@ -217,35 +220,75 @@ class Channel(object):
 		self.mA = mA
 		self.mB = mB
 
-	def avergeFreq(self, payments):
-		pavg = 0
-		psum = 0
+	def getSlowestFreq(self, payments):
+		# at least one payment
+		slowest = payments[0]
+
 		for p in payments:
-			pavg += (p.amt * p.freq)
-			psum += p.amt
-		if psum == 0: return 0
-		return (pavg/psum)
+			if p.freq > slowest.freq:
+				slowest = p
+
+		return slowest
+
+	def getSlowestFreq(self, payments):
+		# at least one payment
+		slowest = payments[0]
+		sumFreq = 0
+
+		for p in payments:
+			if p.freq > slowest.freq:
+				slowest = p
+				sumFreq += 1/p.freq
+
+		return (slowest, sumFreq)
+
+	def getPortionFreq(self, payments):
+		(slowest, sumFreq) = self.getSlowestFreq(payments)
+		portion = (1/ slowest.freq) / sumFreq
+
+
+
+	def avergeFreq(self, payments):
+		# print("calculating averagefreq")
+		sumFreq = 0
+
+		for p in payments:
+			sumFreq += p.amt / p.freq
+			# print("paymnt f: %f; p: %f" %(p.freq, p.amt))
+
+		if len(payments) == 0: return 0
+		return sumFreq
+		
 
 	def optimizeSize(self):
+		# print("---------- optimizeSize")
+		# print(self.paymentsA)
 		fA = self.avergeFreq(self.paymentsA)
 		fB = self.avergeFreq(self.paymentsB)
 		oneWay = 0
 		bidir = 0
 
-		alpha = min(fA, fB)
-		beta = max(fA, fB)
+		oneWay = (self.network.onlineTX * abs(fA - fB) / self.network.r) **(1.0/2)
+		bidir = (2 * self.network.onlineTX * min(fA, fB) / self.network.r)**(1.0/3)
 
-		oneWay = math.sqrt(self.network.onlineTX * (beta - alpha) / self.network.r)
-		bidir = (2 * self.network.onlineTX * alpha / self.network.r)**(1.0/3)
-
-		if alpha == fA:
+		if min(fA, fB) == fA:
 			self.setChannelSize(bidir, bidir+oneWay)
 		else:
 			self.setChannelSize(bidir+oneWay, bidir)
 
 
-	def reopen(self, side):
+		self.balanceA = self.mA
+		self.balanceB = self.mB
 		self.updateCost()
+		# print("2dir: %f; 1dir: %f" %(bidir, oneWay))
+
+		# opens channel
+
+
+	def reopen(self, side):
+		# print("reopening "+ str(self))
+		self.updateCost()
+		self.numReopen += 1
 
 		payments = []
 		if self.A == side:
@@ -263,12 +306,15 @@ class Channel(object):
 
 	def processPayment(self, payment):
 		time = payment.nextTime
-		# print([self.A, self.B, payment.sender])
+		# print("processing payment\n --")
+		# print(payment)
+		# print(" -- ")
 
 		if self.A == payment.sender:
 
 			if self.balanceA < payment.amt:
 				# A has to reopen the channel
+				# print("can't process, reopen")
 				self.reopen(self.A)
 				
 			else:
@@ -276,25 +322,32 @@ class Channel(object):
 				self.balanceA -= payment.amt
 				self.balanceB += payment.amt
 				payment.nextPaymentTime()
+				payment.numProcessed += 1
+				# print("processed, numProcessed %d" % payment.numProcessed)
 				return True
 	
 		elif self.B == payment.sender:
 
 			if self.balanceB < payment.amt:
 				# B has to reopen the channel
+				# print("can't process, reopen")
 				self.reopen(self.B)
+
 
 			else:
 				# able to make the payment, generate the next payment
 				self.balanceB -= payment.amt
 				self.balanceA += payment.amt
 				payment.nextPaymentTime()
+				payment.numProcessed += 1
+				# print("processed, numProcessed %d" % payment.numProcessed)
 				return True
 
 		# payment is not processed because of reopening 
 		return False		
 
 	def processTransfer(self, payment):
+		# instant transfer
 		if self.A == payment.sender:
 			if self.balanceA < payment.amt:
 				# A has to reopen the channel
@@ -303,7 +356,7 @@ class Channel(object):
 			else:
 				self.balanceA -= payment.amt
 				self.balanceB += payment.amt
-				payment.numPaid += 1
+				payment.numProcessed += 1
 				return True
 	
 		elif self.B == payment.sender:
@@ -313,10 +366,29 @@ class Channel(object):
 			else:
 				self.balanceB -= payment.amt
 				self.balanceA += payment.amt
-				payment.numPaid += 1
+				payment.numProcessed += 1
 				return True
 		return False	
 
+	def expectedTX(self):
+		expectedA, expectedB = [], []
+		totalTk = 0
+
+		for p in self.paymentsA:
+			expectedA.append(self.network.totalTime / p.freq)
+			totalTk += (self.network.totalTime / p.freq) * p.amt
+
+		for p in self.paymentsB:
+			expectedB.append(self.network.totalTime / p.freq)
+			totalTk += (self.network.totalTime / p.freq) * p.amt
+		print("expected txs: A:" + str(expectedA) + "; B: " + str(expectedB) + 
+			"; total number of transactions: " + str((sum(expectedA)+sum(expectedB))) + 
+			"; total token: " + str(totalTk) + "; expected reopens: " + str(totalTk/self.mA))
+
+		if (len(expectedA)> 1):
+			print("A with multiple payments: " + str(self.network.totalTime * self.avergeFreq(self.paymentsA)))
+
+		print("while channel size is (%f,%f)" %(self.mA, self.mB))
 
 
 class Network(object):
@@ -331,7 +403,9 @@ class Network(object):
 
 		self.timeLeft = timeLeft
 		self.payments = []
+		self.transferredPayments = []
 		self.history = []
+
 
 	def addNode(self, node):
 		self.nodes.append(node)
@@ -351,6 +425,12 @@ class Network(object):
 	def addPaymentList(self, ps):
 		self.payments.extend(ps)
 
+	def addTransferred(self, payment):
+		self.transferredPayments.append(payment)
+
+	def addTransferredList(self, ps):
+		self.transferredPayments.extend(ps)
+
 	def runNetwork(self):
 		# payments can be concurrent on different channels
 		# the payment that takes the smallest time should be processed first
@@ -361,7 +441,7 @@ class Network(object):
 			c.optimizeSize()
 
 		while self.timeLeft >= 0:
-			# print("while")
+			# print(self.timeLeft)
 			nextPayment = self.payments[0]
 			nPTime = self.payments[0].nextTime
 			for p in self.payments:
@@ -379,7 +459,9 @@ class Network(object):
 			# the channel checks for the channel balance, reopen if balance not enough
 			# print(nextPayment)
 			if (nextPayment.channel.processPayment(nextPayment)):
-				# print("next paument")
+				# print("time:" + str(self.timeLeft))
+				# print("next payment")
+				# print(nextPayment)
 				self.timeLeft -= nPTime
 				for p in self.payments:
 					# print("decrement %s %f " %(nextPayment, self.timeLeft))
@@ -387,66 +469,63 @@ class Network(object):
 						p.nextTime -= nPTime
 					# print("decreasing time")
 				if nextPayment.transferTo != None:
-					# print("transfer")
+					# print("----- transfer")
+					# print(nextPayment.transferTo)
 					nextPayment.transferTo.channel.processTransfer(nextPayment.transferTo)
 
 				# self.history.append((self.timeLeft, nextPayment, nextPayment.channel.balanceA, nextPayment.channel.balanceB))
 			else:
+				# attempt to send failed, payment not processed
 				errorTime = 0.001
 				self.timeLeft -= errorTime
 				for p in self.payments:
 					p.nextTime -= errorTime
 
-		# self.printSummary()
 
 		# self.printSummary()
-		# print(self.history)
-		# for p in self.payments:
-		# 	print([p, p.numPaid])
+		
+
 			
 	def printSummary(self):
+		print("Summary")
+		print("Timeleft: %f" %self.timeLeft)
+		print(" - Nodes: ")
 		for n in self.nodes:
-			print(n.name + str(n.channels))
+			print(n)
+		print(" - Payments: ")
+		for p in self.payments:
+			print(p)
+		print(" - Transferred Payments: ")
+		for p in self.transferredPayments:
+			print(p)
+		print(" - Channels: ")
+		for c in self.channels:
+			print(c)
+		print(" - testing")
+		self.testing()
+		print("\n")
+
 
 	def getTotalCost(self):
 		s = 0
 		for n in self.nodes:
 			s += n.getChCostTotal()
 		return s
-
-def networkDirectAC(p, freq, onlineTX, onlineTXTime, r, timeRun):
-	# set up the network
-	network = Network(onlineTX, onlineTXTime, r, timeRun)
-
-	Alice = Node("Alice", network)
-	Bob = Node("Bob", network)
-	Charlie = Node("Charlie", network)
-
-	paymentAB = Payment(2, 1, Alice, Bob)
-	paymentBC = Payment(2, 1, Bob, Charlie)
-	paymentAC = Payment(freq, p, Alice, Charlie)
-
-	channelAB = Channel(Alice, Bob, 5, 0, network)
-	channelAB.addPayment(paymentAB)
-	channelBC = Channel(Bob, Charlie, 20, 20, network)
-	channelBC.addPayment(paymentBC)
-
-	# Alice creates a direct channel for network 1
-	channelAC = Channel(Alice, Charlie, 5, 0, network)
-	channelAC.addPayment(paymentAC)
 	
-	# print("network")
-	network.addNodeList([Alice, Bob, Charlie])
-	network.addChannelList([channelAB, channelBC, channelAC])
-	network.addPaymentList([paymentAB, paymentBC, paymentAC])
-	network.runNetwork()
+	def testing(self):
+		print("--network expected num tx")
+		for c in self.channels:
+			c.expectedTX()
+		
 
-	a = Alice.getChCostTotal()
-	b = Bob.getChCostTotal()
-	c = Charlie.getChCostTotal()
 
-	return (a, b, c)
-	
+
+
+largePayments = 1
+largeFrequency = 1
+
+
+
 def networkOG(p, freq, onlineTX, onlineTXTime, r, timeRun):
 	# network 2 
 	network = Network(onlineTX, onlineTXTime, r, timeRun)
@@ -455,12 +534,12 @@ def networkOG(p, freq, onlineTX, onlineTXTime, r, timeRun):
 	Bob = Node("Bob", network)
 	Charlie = Node("Charlie", network)
 
-	paymentAB = Payment(2, 1, Alice, Bob)
-	paymentBC = Payment(2, 1, Bob, Charlie)
+	paymentAB = Payment(largeFrequency, largePayments, Alice, Bob)
+	paymentBC = Payment(largeFrequency, largePayments, Bob, Charlie)
 
-	channelAB = Channel(Alice, Bob, 5, 0, network)
+	channelAB = Channel(Alice, Bob, network)
 	channelAB.addPayment(paymentAB)
-	channelBC = Channel(Bob, Charlie, 20, 20, network)
+	channelBC = Channel(Bob, Charlie, network)
 	channelBC.addPayment(paymentBC)
 
 	network.addNodeList([Alice, Bob, Charlie])
@@ -475,7 +554,44 @@ def networkOG(p, freq, onlineTX, onlineTXTime, r, timeRun):
 	b = Bob.getChCostTotal()
 	c = Charlie.getChCostTotal()
 
-	return (a, b, c)
+	return (a+c, b)
+
+
+def networkDirectAC(p, freq, onlineTX, onlineTXTime, r, timeRun):
+	# set up the network
+	network = Network(onlineTX, onlineTXTime, r, timeRun)
+
+	Alice = Node("Alice", network)
+	Bob = Node("Bob", network)
+	Charlie = Node("Charlie", network)
+
+	paymentAB = Payment(largeFrequency, largePayments, Alice, Bob)
+	paymentBC = Payment(largeFrequency, largePayments, Bob, Charlie)
+	paymentAC = Payment(freq, p, Alice, Charlie)
+
+	channelAB = Channel(Alice, Bob, network)
+	channelAB.addPayment(paymentAB)
+	channelBC = Channel(Bob, Charlie, network)
+	channelBC.addPayment(paymentBC)
+
+	# Alice creates a direct channel for network 1
+	channelAC = Channel(Alice, Charlie, network)
+	channelAC.addPayment(paymentAC)
+	
+	# print("network")
+	network.addNodeList([Alice, Bob, Charlie])
+	network.addChannelList([channelAB, channelBC, channelAC])
+	network.addPaymentList([paymentAB, paymentBC, paymentAC])
+	network.runNetwork()
+	
+
+
+	a = Alice.getChCostTotal()
+	b = Bob.getChCostTotal()
+	c = Charlie.getChCostTotal()
+
+	return (a+c, b)
+	
 
 
 def networktransferB(p, freq, onlineTX, onlineTXTime, r, timeRun):
@@ -486,15 +602,15 @@ def networktransferB(p, freq, onlineTX, onlineTXTime, r, timeRun):
 	Bob = Node("Bob", network)
 	Charlie = Node("Charlie", network)
 
-	paymentAB = Payment(2, 1, Alice, Bob)
-	paymentBC = Payment(2, 1, Bob, Charlie)
+	paymentAB = Payment(largeFrequency, largePayments, Alice, Bob)
+	paymentBC = Payment(largeFrequency, largePayments, Bob, Charlie)
 	paymentAC = Payment(freq, p, Alice, Bob)
 	paymentAC1 = Payment(freq, p, Bob, Charlie)
 	paymentAC.setTransfer(paymentAC1)
 
-	channelAB = Channel(Alice, Bob, 5, 0, network)
+	channelAB = Channel(Alice, Bob, network)
 	channelAB.addPayment(paymentAB)
-	channelBC = Channel(Bob, Charlie, 20, 20, network)
+	channelBC = Channel(Bob, Charlie, network)
 	channelBC.addPayment(paymentBC)
 
 	# payment goes through Channel AB and BC
@@ -514,96 +630,19 @@ def networktransferB(p, freq, onlineTX, onlineTXTime, r, timeRun):
 	b = Bob.getChCostTotal()
 	c = Charlie.getChCostTotal()
 
-	return (a, b, c)
-
-def networktransferC(p, freq, onlineTX, onlineTXTime, r, timeRun):
-	# network 2 
-	network = Network(onlineTX, onlineTXTime, r, timeRun)
-	
-	Alice = Node("Alice", network)
-	Bob = Node("Bob", network)
-	Charlie = Node("Charlie", network)
-
-	# AB becomes the transferred payment that go through C
-	paymentBC = Payment(2, 1, Bob, Charlie)
-	paymentAC = Payment(freq, p, Alice, Charlie)
-	paymentAB = Payment(2, 1, Alice, Charlie)
-	paymentAB1 = Payment(2, 1, Charlie, Bob)
-	paymentAB.setTransfer(paymentAB1)
-
-	# existing channels become AC and BC
-	channelBC = Channel(Bob, Charlie, 20, 20, network)
-	channelBC.addPayment(paymentBC)
-	channelAC = Channel(Alice, Charlie, 5, 0, network)
-	channelAC.addPayment(paymentAC)
-
-	# payment goes through Channel AC and BC
-	channelAC.addPayment(paymentAB)
-	channelBC.addPayment(paymentAB1)
+	return (a+c, b)
 
 
-	network.addNodeList([Alice, Bob, Charlie])
-	network.addChannelList([channelBC, channelAC])
-	network.addPaymentList([paymentAB, paymentBC, paymentAC])
-	# print("network2")
-	network.runNetwork()
-	# print([paymentAC2, paymentAC2.numPaid])
 
-
-	a = Alice.getChCostTotal()
-	b = Bob.getChCostTotal()
-	c = Charlie.getChCostTotal()
-
-	return (a, b, c)
-
-
-def networktransferA(p, freq, onlineTX, onlineTXTime, r, timeRun):
-	# network 2 
-	network = Network(onlineTX, onlineTXTime, r, timeRun)
-	
-	Alice = Node("Alice", network)
-	Bob = Node("Bob", network)
-	Charlie = Node("Charlie", network)
-
-	# BC becomes the transferred payment that go through A
-	paymentAB = Payment(2, 1, Alice, Bob)
-	paymentAC = Payment(freq, p, Alice, Charlie)
-	paymentBC = Payment(2, 1, Bob, Alice)	
-	paymentBC1 = Payment(2, 1, Alice, Charlie)
-	paymentBC.setTransfer(paymentBC1)
-
-	# existing channels become AC and AB
-	channelAB = Channel(Alice, Bob, 5, 0, network)
-	channelAB.addPayment(paymentAB)
-	channelAC = Channel(Alice, Charlie, 5, 0, network)
-	channelAC.addPayment(paymentAC)
-
-	# payment goes through Channel AC and AC
-	channelAB.addPayment(paymentBC)
-	channelAC.addPayment(paymentBC1)
-
-
-	network.addNodeList([Alice, Bob, Charlie])
-	network.addChannelList([channelAB, channelAC])
-	network.addPaymentList([paymentAB, paymentBC, paymentAC])
-	# print("network2")
-	network.runNetwork()
-	# print([paymentAC2, paymentAC2.numPaid])
-
-
-	a = Alice.getChCostTotal()
-	b = Bob.getChCostTotal()
-	c = Charlie.getChCostTotal()
-
-	return (a, b, c)
 
 def main(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun = 10.0):
-	(a0, b0, c0) = networkOG(p, freq, onlineTX, onlineTXTime, r, timeRun)
-	(a1, b1, c1) = networkDirectAC(p, freq, onlineTX, onlineTXTime, r, timeRun)
-	(a2, b2, c2) = networktransferB(p, freq, onlineTX, onlineTXTime, r, timeRun)
-	(a3, b3, c3) = networktransferC(p, freq, onlineTX, onlineTXTime, r, timeRun)
-	(a4, b4, c4) = networktransferA(p, freq, onlineTX, onlineTXTime, r, timeRun)
-	
+	(a0, b0) = networkOG(p, freq, onlineTX, onlineTXTime, r, timeRun)
+	(a1, b1) = networkDirectAC(p, freq, onlineTX, onlineTXTime, r, timeRun)
+	(a2, b2) = networktransferB(p, freq, onlineTX, onlineTXTime, r, timeRun)
+	# (a3, b3, c3) = networktransferC(p, freq, onlineTX, onlineTXTime, r, timeRun)
+	# (a4, b4, c4) = networktransferA(p, freq, onlineTX, onlineTXTime, r, timeRun)
+
+
 	# lbd = paymentAC1.estimtedLbd(paymentAB1)
 	# ubd = paymentAC1.estimateUbd()
 
@@ -617,7 +656,7 @@ def main(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun 
 	# return (a0+c0, b0, a1+c1, b1, a2+c2, b2)
 
 	# just bob
-	return (a0+c0, b0, a1+c1, b1, a2+c2, b2)
+	return (a0, b0, a1, b1, a2, b2)
 
 
 
@@ -625,3 +664,91 @@ def main(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun 
 
 if __name__ == '__main__':
     main()
+
+
+
+
+
+
+
+# def networktransferA(p, freq, onlineTX, onlineTXTime, r, timeRun):
+# 	# network 2 
+# 	network = Network(onlineTX, onlineTXTime, r, timeRun)
+	
+# 	Alice = Node("Alice", network)
+# 	Bob = Node("Bob", network)
+# 	Charlie = Node("Charlie", network)
+
+# 	# BC becomes the transferred payment that go through A
+# 	paymentAB = Payment(largeFrequency, largePayments, Alice, Bob)
+# 	paymentAC = Payment(freq, p, Alice, Charlie)
+# 	paymentBC = Payment(largeFrequency, largePayments, Bob, Alice)	
+# 	paymentBC1 = Payment(largeFrequency, largePayments, Alice, Charlie)
+# 	paymentBC.setTransfer(paymentBC1)
+
+# 	# existing channels become AC and AB
+# 	channelAB = Channel(Alice, Bob, 5, 0, network)
+# 	channelAB.addPayment(paymentAB)
+# 	channelAC = Channel(Alice, Charlie, 5, 0, network)
+# 	channelAC.addPayment(paymentAC)
+
+# 	# payment goes through Channel AC and AC
+# 	channelAB.addPayment(paymentBC)
+# 	channelAC.addPayment(paymentBC1)
+
+
+# 	network.addNodeList([Alice, Bob, Charlie])
+# 	network.addChannelList([channelAB, channelAC])
+# 	network.addPaymentList([paymentAB, paymentBC, paymentAC])
+# 	# print("network2")
+# 	network.runNetwork()
+# 	# print([paymentAC2, paymentAC2.numPaid])
+
+
+# 	a = Alice.getChCostTotal()
+# 	b = Bob.getChCostTotal()
+# 	c = Charlie.getChCostTotal()
+
+# 	return (a+c, b)
+
+
+
+# def networktransferC(p, freq, onlineTX, onlineTXTime, r, timeRun):
+# 	# network 2 
+# 	network = Network(onlineTX, onlineTXTime, r, timeRun)
+	
+# 	Alice = Node("Alice", network)
+# 	Bob = Node("Bob", network)
+# 	Charlie = Node("Charlie", network)
+
+# 	# AB becomes the transferred payment that go through C
+# 	paymentBC = Payment(largeFrequency, largePayments, Bob, Charlie)
+# 	paymentAC = Payment(freq, p, Alice, Charlie)
+# 	paymentAB = Payment(largeFrequency, largePayments, Alice, Charlie)
+# 	paymentAB1 = Payment(largeFrequency, largePayments, Charlie, Bob)
+# 	paymentAB.setTransfer(paymentAB1)
+
+# 	# existing channels become AC and BC
+# 	channelBC = Channel(Bob, Charlie, 20, 20, network)
+# 	channelBC.addPayment(paymentBC)
+# 	channelAC = Channel(Alice, Charlie, 5, 0, network)
+# 	channelAC.addPayment(paymentAC)
+
+# 	# payment goes through Channel AC and BC
+# 	channelAC.addPayment(paymentAB)
+# 	channelBC.addPayment(paymentAB1)
+
+
+# 	network.addNodeList([Alice, Bob, Charlie])
+# 	network.addChannelList([channelBC, channelAC])
+# 	network.addPaymentList([paymentAB, paymentBC, paymentAC])
+# 	# print("network2")
+# 	network.runNetwork()
+# 	# print([paymentAC2, paymentAC2.numPaid])
+
+
+# 	a = Alice.getChCostTotal()
+# 	b = Bob.getChCostTotal()
+# 	c = Charlie.getChCostTotal()
+
+# 	return (a+c, b)
