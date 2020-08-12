@@ -8,6 +8,7 @@ import matplotlib.mlab as mlab
 import matplotlib.gridspec as gridspec
 import matplotlib.transforms as mtransforms
 from mpl_toolkits.mplot3d.axes3d import Axes3D
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 
@@ -72,6 +73,25 @@ def getIntersections(list1, list2, ps, fs):
             elif (((list1[i][j-1] > list2[i][j-1]) and (list1[i][j] < list2[i][j]))
                 or ((list1[i][j-1] < list2[i][j-1]) and (list1[i][j] > list2[i][j]))):
                 points.append([ps[i], fs[j], (list1[i][j-1]+list1[i][j])/2])
+            elif (((list1[i-1][j] > list2[i-1][j]) and (list1[i][j] < list2[i][j]))
+                or ((list1[i-1][j] < list2[i-1][j]) and (list1[i][j] > list2[i][j]))):
+                points.append([ps[i], fs[j], (list1[i][j-1]+list1[i][j])/2])
+
+
+    return points
+
+def getIntercepts(list, ps, fs):
+    points = []
+
+    for i in range(1, len(ps)):
+        for j in range(1, len(fs)):
+            if list[i][j] == 0:
+                points.append((ps[i], fs[j], 0))
+            elif (((list[i-1][j] < 0) or (list[i][j-1] < 0)) and (list[i][j] > 0)):
+                points.append((ps[i], fs[j], 0))
+            elif (((list[i-1][j] > 0) or (list[i][j-1] > 0)) and (list[i][j] < 0)):
+                points.append((ps[i], fs[j], 0))
+
 
     return points
 
@@ -94,17 +114,17 @@ time = 50
 
 givenP = 0.5
 
-paymentMean = 0.1
+paymentMean = 0.5
 
 paymentSigma = 0.1
 
 psInit = 1
 
-fsInit = 50
+fsInit = 1
 
-psLen = 100
+psLen = 50
 
-fsLen = 100
+fsLen = 50
 
 psIncre = 10
 
@@ -113,9 +133,9 @@ fsIncre = 10
 
 def runWithPayment(time):
     # 0.2 to 1.2
-    ps = [x* 1.0 /100 for x in range(psInit, psInit+psLen)]
+    ps = [x* 1.0 /10 for x in range(psInit, psInit+psLen)]
     # 0.25 to 1.25
-    fs = [x* 1.0 /100 for x in range(fsInit, fsInit+fsLen)]
+    fs = [x* 1.0 /1 for x in range(fsInit, fsInit+fsLen)]
 
     # random.expovariate(givenP)
     # ps = np.arange(0.0, 1.0 + 0.01, 0.01)
@@ -157,8 +177,12 @@ def runWithPayment(time):
     bob22 = payFee(costs[5], chargeFee(costs[4], costs[0]))
     minFee = chargeFee(bob22, costs[1])
 
+    diff = chargeFee(maxFee, minFee)
+
+
     Z = np.array(maxFee)
     U = np.array(minFee)
+    W = np.array(diff)
 
     # print(maxFee)
     # print(minFee)
@@ -176,55 +200,105 @@ def runWithPayment(time):
     fig = plt.figure(figsize=plt.figaspect(0.5))
 
     titles = ['Payment vs Frequency\n vs Maximum fee bound', 
-            'Payment vs Frequency\n vs Minimum fee bound']
-    Zs = [Z, U]
+            'Payment vs Frequency\n vs Minimum fee bound',
+            'Payment vs Frequency\n vs fee bound difference']
+    Zs = [Z, U, W]
 
-    titles_users = ['alice0', 'bob0', 'alice1', 'bob1', 'alice2', 'bob2']
-    for i in range(0,6):
-        ax = fig.add_subplot(2, 3, i+1, projection='3d')
-        ax.set_xlabel('Payment size')
-        ax.set_ylabel('Frequency')
-        ax.set_zlabel("Channel Costs")
-        ax.set_title(titles_users[i])
-        ax.view_init(azim=0, elev=90)
+    # titles_users = ['alice0', 'bob0', 'alice1', 'bob1', 'alice2', 'bob2']
+    # for i in range(0,6):
+    #     ax = fig.add_subplot(2, 3, i+1, projection='3d')
+    #     ax.set_xlabel('Payment size')
+    #     ax.set_ylabel('Frequency')
+    #     ax.set_zlabel("Channel Costs")
+    #     ax.set_title(titles_users[i])
+    #     ax.view_init(azim=0, elev=90)
 
-        Z = np.array(costs[i])
+    #     Z = np.array(costs[i])
         
-        surf = ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cm.coolwarm,
-                           linewidth=0, antialiased=False)
-        fig.colorbar(surf, shrink=0.5, aspect=10)
-    fig.savefig('3node_pf_users.png')
+    #     surf = ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cm.coolwarm,
+    #                        linewidth=0, antialiased=False)
+    #     fig.colorbar(surf, shrink=0.5, aspect=10)
+    # fig.savefig('3node_pf_users.png')
 
 
     fig2 = plt.figure(figsize=plt.figaspect(0.5))
-    for i in range(0, 2):
-        ax = fig2.add_subplot(plotsize, 2, i+1, projection='3d')
-        ax.set_xlabel('Payment size')
-        ax.set_ylabel('Frequency')
-        ax.set_zlabel("Fee Bound")
-        ax.set_title(titles[i])
-        ax.view_init(azim=0, elev=90)        
-        
-        surf = ax.plot_surface(X, Y, Zs[i], rstride=1, cstride=1, cmap=cm.coolwarm,
-                           linewidth=0, antialiased=False)
-        fig2.colorbar(surf, shrink=0.5, aspect=10)
+   
+    ax = fig2.add_subplot(1, 1, 1, projection='3d')
+    ax.set_xlabel('Payment size')
+    ax.set_ylabel('Frequency')
+    ax.set_zlabel("Fee Bound Difference")
+    ax.set_title(titles[2])
+    # ax.view_init(azim=0, elev=90)        
+    
+    surf = ax.plot_surface(X, Y, Zs[2], rstride=1, cstride=1, cmap=cm.coolwarm,
+                       linewidth=0, antialiased=False)
+    fig2.colorbar(surf, shrink=0.5, aspect=10)
+
 
     fig2.savefig('3node_pf.png')
 
+    # fig2 = plt.figure(figsize=plt.figaspect(0.5))
+    # for i in range(0, 3):
+    #     ax = fig2.add_subplot(2, 2, i+1, projection='3d')
+    #     ax.set_xlabel('Payment size')
+    #     ax.set_ylabel('Frequency')
+    #     ax.set_zlabel("Fee Bound")
+    #     ax.set_title(titles[i])
+    #     # ax.view_init(azim=0, elev=90)        
+        
+    #     surf = ax.plot_surface(X, Y, Zs[i], rstride=1, cstride=1, cmap=cm.coolwarm,
+    #                        linewidth=0, antialiased=False)
+    #     fig2.colorbar(surf, shrink=0.5, aspect=10)
 
-    fig3 = plt.figure(figsize=plt.figaspect(0.5))
+
+    # fig2.savefig('3node_pf.png')
+
+    intercepts = getIntercepts(diff, ps, fs)
+    intercepts = np.transpose(np.array(intercepts))
+
+    
                         
-    if (len(inter) != 0):
-        ax = fig3.add_subplot(plotsize, 2, 3, projection='3d')
+    if (len(intercepts) != 0):
+        print("intercepts")
+        print(intercepts)
+
+
+        fig3 = plt.figure(figsize=plt.figaspect(0.5))
+
+        ax = fig3.add_subplot(1, 1, 1)
+        
         ax.set_xlabel('Payment size')
         ax.set_ylabel('Frequency')
-        ax.set_zlabel("Fee Bound")
         ax.set_title("Intersection points")
-        ax.view_init(azim=0, elev=90)
 
-        ax.scatter(inter[0], inter[1], inter[2], marker='o')
+        ax.scatter(intercepts[0], intercepts[1], marker='o')
 
-    fig3.savefig('3node_pf_inter.png')
+
+        fig3.savefig('3node_pf_inter.png')
+
+
+    # fig4 = plt.figure(figsize=plt.figaspect(0.5))
+
+    # ax = fig4.add_subplot(1, 1, 1, projection='3d')
+    # ax.set_xlabel('Payment size')
+    # ax.set_ylabel('Frequency')
+    # ax.set_zlabel("Fee cost")
+    # ax.set_title("Possible fees for both parties")
+    # # ax.view_init(azim=0, elev=90)        
+
+    # verts = [list(zip(ps,fs,maxFee))]
+    # # verts2 = [list(zip(ps,fs,minFee))]
+    # # verts.extend([list(zip(X,Y,U))])
+    # ax.add_collection3d(Poly3DCollection(verts))
+    # # ax.add_collection3d(Poly3DCollection(verts2))
+
+    
+    # # surf = ax.plot_surface(X, Y, Zs[i], rstride=1, cstride=1, cmap=cm.coolwarm,
+    #                    # linewidth=0, antialiased=False)
+    # # fig2.colorbar(surf, shrink=0.5, aspect=10)
+    # fig4.savefig('3node_pf2.png')
+
+
 
 
 ################ Call #####################

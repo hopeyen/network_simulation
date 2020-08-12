@@ -47,6 +47,40 @@ fsmultiply = 1.0
 
 
 ############### Set up ###################
+def networkStarOG(p, freq, onlineTX, onlineTXTime, r, timeRun):
+    # a star / fork network
+    network = simulation_1.Network(onlineTX, onlineTXTime, r, timeRun)
+    
+    Alice = simulation_1.Node("Alice", network)
+    Bob = simulation_1.Node("Bob", network)
+    Charlie = simulation_1.Node("Charlie", network)
+    Donna = simulation_1.Node("Donna", network)
+
+    paymentAB = simulation_1.Payment(largeFrequency, largePayment, Alice, Bob)
+    paymentBC = simulation_1.Payment(largeFrequency, largePayment, Charlie， Bob)
+    paymentBD = simulation_1.Payment(largeFrequency, largePayment, Donna, Bob)
+    paymentCD = simulation_1.Payment(largeFrequency, largePayment, Charlie, Bob)
+    paymentCD1 = simulation_1.Payment(largeFrequency, largePayment, Bob, Donna)
+    paymentCD.setTransfer(paymentCD1)
+
+    channelAB = simulation_1.Channel(Alice, Bob, network)
+    channelBC = simulation_1.Channel(Bob, Charlie, network)
+    channelBD = simulation_1.Channel(Bob, Donna, network)
+
+    channelAB.addPaymentList([paymentAB])
+    channelBC.addPaymentList([paymentBC, paymentCD])
+    channelBD.addPaymentList([paymentBD, paymentCD1])
+
+    network.addPaymentList([paymentAB, paymentBC, paymentBD, paymentCD])
+
+    network.runNetwork()
+
+    a = Alice.getChCostTotal()
+    b = Bob.getChCostTotal()
+    c = Charlie.getChCostTotal()
+    d = Donna.getChCostTotal()
+
+    return (a, b, c, d)
 
 def networkStar(p, freq, onlineTX, onlineTXTime, r, timeRun):
     # a star / fork network
@@ -57,13 +91,13 @@ def networkStar(p, freq, onlineTX, onlineTXTime, r, timeRun):
     Charlie = simulation_1.Node("Charlie", network)
     Donna = simulation_1.Node("Donna", network)
 
-    paymentAB = simulation_1.Payment(largePayment, largeFrequency, Alice, Bob)
-    paymentBC = simulation_1.Payment(largePayment, largeFrequency, Bob, Charlie)
+    paymentAB = simulation_1.Payment(largeFrequency, largePayment, Alice, Bob)
+    paymentBC = simulation_1.Payment(largeFrequency, largePayment, Charlie， Bob)
     paymentAD = simulation_1.Payment(freq, p, Alice, Bob)
     paymentAD1 = simulation_1.Payment(freq, p, Bob, Donna)
-    paymentBD = simulation_1.Payment(largePayment, largeFrequency, Bob, Donna)
-    paymentCD = simulation_1.Payment(largePayment, largeFrequency, Charlie, Bob)
-    paymentCD1 = simulation_1.Payment(largePayment, largeFrequency, Bob, Donna)
+    paymentBD = simulation_1.Payment(largeFrequency, largePayment, Donna, Bob)
+    paymentCD = simulation_1.Payment(largeFrequency, largePayment, Charlie, Bob)
+    paymentCD1 = simulation_1.Payment(largeFrequency, largePayment, Bob, Donna)
     paymentAD.setTransfer(paymentAD1)
     paymentCD.setTransfer(paymentCD1)
 
@@ -95,12 +129,12 @@ def networkTri(p, freq, onlineTX, onlineTXTime, r, timeRun):
     Charlie = simulation_1.Node("Charlie", network)
     Donna = simulation_1.Node("Donna", network)
 
-    paymentAB = simulation_1.Payment(largePayment, largeFrequency, Alice, Bob)
-    paymentBC = simulation_1.Payment(largePayment, largeFrequency, Bob, Charlie)
+    paymentAB = simulation_1.Payment(largeFrequency, largePayment, Alice, Bob)
+    paymentBC = simulation_1.Payment(largeFrequency, largePayment, Charlie, Bob)
     paymentAD = simulation_1.Payment(freq, p, Alice, Donna)
-    paymentBD = simulation_1.Payment(largePayment, largeFrequency, Bob, Donna)
-    paymentCD = simulation_1.Payment(largePayment, largeFrequency, Charlie, Bob)
-    paymentCD1 = simulation_1.Payment(largePayment, largeFrequency, Bob, Donna)
+    paymentBD = simulation_1.Payment(largeFrequency, largePayment, Donna, Bob)
+    paymentCD = simulation_1.Payment(largeFrequency, largePayment, Charlie, Bob)
+    paymentCD1 = simulation_1.Payment(largeFrequency, largePayment, Bob, Donna)
     paymentCD.setTransfer(paymentCD1)
 
     channelAB = simulation_1.Channel(Alice, Bob, network)
@@ -114,8 +148,6 @@ def networkTri(p, freq, onlineTX, onlineTXTime, r, timeRun):
     channelAD.addPaymentList([paymentAD])
     channelBD.addPaymentList([paymentBD, paymentCD1])
 
-    network.addNodeList([Alice, Bob, Charlie, Donna])
-    network.addChannelList([channelAB, channelBC, channelAD, channelBD])
     network.addPaymentList([paymentAB, paymentBC, paymentAD, paymentBD, paymentCD])
 
     network.runNetwork()
@@ -128,6 +160,44 @@ def networkTri(p, freq, onlineTX, onlineTXTime, r, timeRun):
     return (a, b, c, d)
 
 
+def networkLineOG(p, freq, onlineTX, onlineTXTime, r, timeRun):
+    # the network as a line A-B-C-D
+    network = simulation_1.Network(onlineTX, onlineTXTime, r, timeRun)
+    
+    Alice = simulation_1.Node("Alice", network)
+    Bob = simulation_1.Node("Bob", network)
+    Charlie = simulation_1.Node("Charlie", network)
+    Donna = simulation_1.Node("Donna", network)
+
+    paymentAB = simulation_1.Payment(largeFrequency, largePayment, Alice, Bob)
+    paymentBC = simulation_1.Payment(largeFrequency, largePayment, Charlie, Bob)
+    # paymentBD = simulation_1.Payment(0.5, 1, Bob, Charlie)
+    # paymentBD1 = simulation_1.Payment(0.5, 1, Charlie, Donna)
+    paymentCD = simulation_1.Payment(largeFrequency, largePayment, Charlie, Donna)
+    # paymentBD.setTransfer(paymentBD1)
+
+    channelAB = simulation_1.Channel(Alice, Bob, network)
+    channelBC = simulation_1.Channel(Bob, Charlie, network)
+    channelCD = simulation_1.Channel(Charlie, Donna, network)
+
+    channelAB.addPaymentList([paymentAB])
+    # channelBC.addPaymentList([paymentBC, paymentAD1, paymentBD])
+    channelBC.addPaymentList([paymentBC])
+    # channelCD.addPaymentList([paymentCD, paymentBD1, paymentAD2])
+    channelCD.addPaymentList([paymentCD])
+
+    # network.addPaymentList([paymentAB, paymentBC, paymentAD, paymentBD, paymentCD])
+    network.addPaymentList([paymentAB, paymentBC, paymentCD])
+
+    network.runNetwork()
+
+    a = Alice.getChCostTotal()
+    b = Bob.getChCostTotal()
+    c = Charlie.getChCostTotal()
+    d = Donna.getChCostTotal()
+
+    return (a, b, c, d)
+
 def networkCycle(p, freq, onlineTX, onlineTXTime, r, timeRun):
     # diagonal network    
     network = simulation_1.Network(onlineTX, onlineTXTime, r, timeRun)
@@ -137,12 +207,12 @@ def networkCycle(p, freq, onlineTX, onlineTXTime, r, timeRun):
     Charlie = simulation_1.Node("Charlie", network)
     Donna = simulation_1.Node("Donna", network)
 
-    paymentAB = simulation_1.Payment(largePayment, largeFrequency, Alice, Bob)
-    paymentBC = simulation_1.Payment(largePayment, largeFrequency, Bob, Charlie)
+    paymentAB = simulation_1.Payment(largeFrequency, largePayment, Alice, Bob)
+    paymentBC = simulation_1.Payment(largeFrequency, largePayment, Charlie, Bob)
     paymentAD = simulation_1.Payment(freq, p, Alice, Donna)
     # paymentBD = simulation_1.Payment(0.5, 1, Bob, Charlie)
     # paymentBD1 = simulation_1.Payment(0.5, 1, Charlie, Donna)
-    paymentCD = simulation_1.Payment(largePayment, largeFrequency, Charlie, Donna)
+    paymentCD = simulation_1.Payment(largeFrequency, largePayment, Charlie, Donna)
     # paymentBD.setTransfer(paymentBD1)
 
     channelAB = simulation_1.Channel(Alice, Bob, network)
@@ -157,8 +227,6 @@ def networkCycle(p, freq, onlineTX, onlineTXTime, r, timeRun):
     channelCD.addPaymentList([paymentCD])
     channelAD.addPaymentList([paymentAD])
 
-    network.addNodeList([Alice, Bob, Charlie, Donna])
-    network.addChannelList([channelAB, channelBC, channelCD, channelAD])
     # network.addPaymentList([paymentAB, paymentBC, paymentAD, paymentBD, paymentCD])
     network.addPaymentList([paymentAB, paymentBC, paymentAD, paymentCD])
 
@@ -181,14 +249,14 @@ def networkLine(p, freq, onlineTX, onlineTXTime, r, timeRun):
     Charlie = simulation_1.Node("Charlie", network)
     Donna = simulation_1.Node("Donna", network)
 
-    paymentAB = simulation_1.Payment(largePayment, largeFrequency, Alice, Bob)
-    paymentBC = simulation_1.Payment(largePayment, largeFrequency, Bob, Charlie)
+    paymentAB = simulation_1.Payment(largeFrequency, largePayment, Alice, Bob)
+    paymentBC = simulation_1.Payment(largeFrequency, largePayment, Charlie, Bob)
     paymentAD = simulation_1.Payment(freq, p, Alice, Bob)
     paymentAD1 = simulation_1.Payment(freq, p, Bob, Charlie)
     paymentAD2 = simulation_1.Payment(freq, p, Charlie, Donna)
     # paymentBD = simulation_1.Payment(0.5, 1, Bob, Charlie)
     # paymentBD1 = simulation_1.Payment(0.5, 1, Charlie, Donna)
-    paymentCD = simulation_1.Payment(largePayment, largeFrequency, Charlie, Donna)
+    paymentCD = simulation_1.Payment(largeFrequency, largePayment, Charlie, Donna)
     paymentAD.setTransfer(paymentAD1)
     paymentAD1.setTransfer(paymentAD2)
     # paymentBD.setTransfer(paymentBD1)
@@ -203,8 +271,6 @@ def networkLine(p, freq, onlineTX, onlineTXTime, r, timeRun):
     # channelCD.addPaymentList([paymentCD, paymentBD1, paymentAD2])
     channelCD.addPaymentList([paymentCD, paymentAD2])
 
-    network.addNodeList([Alice, Bob, Charlie, Donna])
-    network.addChannelList([channelAB, channelBC, channelCD])
     # network.addPaymentList([paymentAB, paymentBC, paymentAD, paymentBD, paymentCD])
     network.addPaymentList([paymentAB, paymentBC, paymentAD, paymentCD])
 
@@ -218,6 +284,7 @@ def networkLine(p, freq, onlineTX, onlineTXTime, r, timeRun):
     return (a, b, c, d)
 
 
+
 def networkStar2(p, freq, onlineTX, onlineTXTime, r, timeRun):
     # a star / fork network
     network = simulation_1.Network(onlineTX, onlineTXTime, r, timeRun)
@@ -227,23 +294,24 @@ def networkStar2(p, freq, onlineTX, onlineTXTime, r, timeRun):
     Charlie = simulation_1.Node("Charlie", network)
     Donna = simulation_1.Node("Donna", network)
 
-    paymentAB = simulation_1.Payment(largePayment, largeFrequency, Alice, Bob)
-    paymentBC = simulation_1.Payment(largePayment, largeFrequency, Bob, Charlie)
+    paymentAB = simulation_1.Payment(largeFrequency, largePayment, Alice, Bob)
+    paymentBC = simulation_1.Payment(largeFrequency, largePayment, Charlie, Bob)
     paymentAD = simulation_1.Payment(freq, p, Alice, Bob)
     paymentAD1 = simulation_1.Payment(freq, p, Bob, Donna)
-    paymentBD = simulation_1.Payment(largePayment, largeFrequency, Bob, Donna)
+    paymentAC = simulation_1.Payment(freq, p, Alice, Bob)
+    paymentAC1 = simulation_1.Payment(freq, p, Bob, Charlie)
+    paymentBD = simulation_1.Payment(largeFrequency, largePayment, Bob, Donna)
     paymentAD.setTransfer(paymentAD1)
+    paymentAC.setTransfer(paymentAC1)
 
     channelAB = simulation_1.Channel(Alice, Bob, network)
     channelBC = simulation_1.Channel(Bob, Charlie, network)
     channelBD = simulation_1.Channel(Bob, Donna, network)
 
-    channelAB.addPaymentList([paymentAB, paymentAD])
-    channelBC.addPaymentList([paymentBC])
+    channelAB.addPaymentList([paymentAB, paymentAD, paymentAC])
+    channelBC.addPaymentList([paymentBC, paymentAC1])
     channelBD.addPaymentList([paymentBD, paymentAD1])
 
-    network.addNodeList([Alice, Bob, Charlie, Donna])
-    network.addChannelList([channelAB, channelBC, channelBD])
     network.addPaymentList([paymentAB, paymentBC, paymentAD, paymentBD])
 
     network.runNetwork()
@@ -264,24 +332,25 @@ def networkTri2(p, freq, onlineTX, onlineTXTime, r, timeRun):
     Charlie = simulation_1.Node("Charlie", network)
     Donna = simulation_1.Node("Donna", network)
 
-    paymentAB = simulation_1.Payment(largePayment, largeFrequency, Alice, Bob)
-    paymentBC = simulation_1.Payment(largePayment, largeFrequency, Bob, Charlie)
+    paymentAB = simulation_1.Payment(largeFrequency, largePayment, Alice, Bob)
+    paymentBC = simulation_1.Payment(largeFrequency, largePayment, Charlie, Bob)
     paymentAD = simulation_1.Payment(freq, p, Alice, Donna)
-    paymentBD = simulation_1.Payment(largePayment, largeFrequency, Bob, Donna)
+    paymentAC = simulation_1.Payment(freq, p, Alice, Charlie)
+    paymentBD = simulation_1.Payment(largeFrequency, largePayment, Donna, Bob)
 
     channelAB = simulation_1.Channel(Alice, Bob, network)
     channelBC = simulation_1.Channel(Bob, Charlie, network)
     channelBD = simulation_1.Channel(Bob, Donna, network)
     # added direct channel for payment AD
     channelAD = simulation_1.Channel(Alice, Donna, network)
+    channelAC = simulation_1.Channel(Alice, Charlie, network)
 
     channelAB.addPaymentList([paymentAB])
     channelBC.addPaymentList([paymentBC])
     channelAD.addPaymentList([paymentAD])
     channelBD.addPaymentList([paymentBD])
+    channelAC.addPaymentList([paymentAC])
 
-    network.addNodeList([Alice, Bob, Charlie, Donna])
-    network.addChannelList([channelAB, channelBC, channelAD, channelBD])
     network.addPaymentList([paymentAB, paymentBC, paymentAD, paymentBD])
 
     network.runNetwork()
@@ -305,11 +374,12 @@ def setUp4D(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeR
 
 def setUpPF_star(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun = 10.0):
     simulation_res = []
+    tempStarOG = networkStarOG(p, freq, onlineTX, onlineTXTime, r, timeRun)
     tempStar = networkStar(p, freq, onlineTX, onlineTXTime, r, timeRun)
     tempTri = networkTri(p, freq, onlineTX, onlineTXTime, r, timeRun)
-    # alice and donna, and bob is affected by the direct channel, charlie does not matter
-    simulation_res.append((tempStar[0]+tempStar[2], tempStar[1]))
-    simulation_res.append((tempTri[0]+tempTri[2], tempTri[1]))
+    simulation_res.append((tempStarOG[0]+tempStarOG[3], tempStarOG[1]+tempStarOG[2]))
+    simulation_res.append((tempStar[0]+tempStar[3], tempStar[1]+tempStar[2]))
+    simulation_res.append((tempTri[0]+tempTri[3], tempTri[1]+tempStar[2]))
 
     return simulation_res
 
@@ -317,18 +387,21 @@ def setUpPF_cycle(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01,
     simulation_res = []
     tempCycle = networkCycle(p, freq, onlineTX, onlineTXTime, r, timeRun)
     tempLine = networkLine(p, freq, onlineTX, onlineTXTime, r, timeRun)
-    simulation_res.append((tempLine[0]+ tempLine[1], tempLine[2]+tempLine[3]))
-    simulation_res.append((tempCycle[0]+tempCycle[1], tempCycle[2]+tempCycle[3]))
+    tempLineOG = networkLineOG(p, freq, onlineTX, onlineTXTime, r, timeRun)
+    simulation_res.append((tempLineOG[0]+ tempLineOG[3], tempLineOG[2]+tempLineOG[1]))
+    simulation_res.append((tempLine[0]+ tempLine[3], tempLine[2]+tempLine[1]))
+    simulation_res.append((tempCycle[0]+tempCycle[3], tempCycle[2]+tempCycle[1]))
 
     return simulation_res
 
 def setUpPF_star2(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun = 10.0):
     simulation_res = []
+    tempStarOG = networkStarOG(p, freq, onlineTX, onlineTXTime, r, timeRun)
     tempStar = networkStar2(p, freq, onlineTX, onlineTXTime, r, timeRun)
     tempTri = networkTri2(p, freq, onlineTX, onlineTXTime, r, timeRun)
-    # alice and donna, and bob is affected by the direct channel, charlie does not matter
-    simulation_res.append((tempStar[0]+tempStar[2], tempStar[1]))
-    simulation_res.append((tempTri[0]+tempTri[2], tempTri[1]))
+    simulation_res.append((tempStarOG[0]+tempStarOG[3], tempStarOG[1]+tempStarOG[2]))
+    simulation_res.append((tempStar[0]+tempStar[2]+tempStar[3], tempStar[1]))
+    simulation_res.append((tempTri[0]+tempTri[2]+tempTri[3], tempTri[1]))
 
     return simulation_res
 
@@ -350,7 +423,7 @@ def graphPF_Star(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, 
             res = [0 for x in range(2)] 
             
             for k in range(num_trial):
-                # get the average of the trial given certain freq and p
+                # setup returns ((a0,b0), (aS, bS), (aT, bT))
                 tmp = setUpPF_star(p=ps[j], freq=fs[i], timeRun = timeRun)
                 temp = [tmp[1][0]-tmp[0][0], tmp[0][1]-tmp[1][1]]
 
@@ -459,7 +532,7 @@ def graphPF_Star2(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01,
     ax = fig.add_subplot(2,1, 2)
     ax.set_xlabel('frequency (lambda)')
     ax.set_ylabel('benefit')
-    ax.set_title('benefit of the transfer in cycle vs frequency')
+    ax.set_title('benefit of the transfer in star vs frequency')
 
     for i in range(0, 2):
         surf = ax.plot(fs, costOnFreq[i])
@@ -546,8 +619,8 @@ def graphPF_Cycle(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01,
 
 
 
-# graphPF_Star(time)
-graphPF_Star2(time)
+graphPF_Star(time)
+# graphPF_Star2(time)
 # graphPF_Cycle(time)
 
 

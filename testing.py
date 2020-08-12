@@ -15,7 +15,7 @@ import matplotlib.transforms as mtransforms
 
 alice0, bob0, alice1, bob1, alice2, bob2 = [], [], [], [], [], []
 
-num_trial = 1
+num_trial = 200
 
 time = 50
 
@@ -28,6 +28,7 @@ largePayments = 1
 littleP = 0.5
 
 littleF = 1.5
+
 
 
 ############ Helper functions ################
@@ -122,7 +123,7 @@ def getFees(ps, f, time):
 
 
         
-def networkOG(p, freq, onlineTX, onlineTXTime, r, timeRun):
+def networkOG(p, freq, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun = 10.0):
     # a star / fork network
     network = simulation_1.Network(onlineTX, onlineTXTime, r, timeRun)
     
@@ -132,22 +133,18 @@ def networkOG(p, freq, onlineTX, onlineTXTime, r, timeRun):
 
     paymentAB = simulation_1.Payment(largeFrequency, largePayments, Alice, Bob)
     paymentBC = simulation_1.Payment(largeFrequency, largePayments, Bob, Charlie)
-    paymentAC = simulation_1.Payment(freq, p, Alice, Bob)
-    paymentAC1 = simulation_1.Payment(freq, p, Bob, Charlie)
-    paymentAC.setTransfer(paymentAC1)
 
     channelAB = simulation_1.Channel(Alice, Bob, network)
     channelBC = simulation_1.Channel(Bob, Charlie, network)
 
-    channelAB.addPaymentList([paymentAB, paymentAC])
-    channelBC.addPaymentList([paymentBC, paymentAC1])
+    channelAB.addPaymentList([paymentAB])
+    channelBC.addPaymentList([paymentBC])
 
     
-    network.addPaymentList([paymentAB, paymentBC, paymentAC])
-    network.addTransferredList([paymentAC1])
-
+    network.addPaymentList([paymentAB, paymentBC])
+    # print("network0")
     network.runNetwork()
-    network.printSummary()
+    # network.printSummary()
 
     a = Alice.getChCostTotal()
     b = Bob.getChCostTotal()
@@ -155,7 +152,7 @@ def networkOG(p, freq, onlineTX, onlineTXTime, r, timeRun):
 
     return (a+c, b)
 
-def networkDirectAC(p, freq, onlineTX, onlineTXTime, r, timeRun):
+def networkDirectAC(p, freq, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun = 10.0):
     # set up the network
     network = simulation_1.Network(onlineTX, onlineTXTime, r, timeRun)
 
@@ -176,13 +173,11 @@ def networkDirectAC(p, freq, onlineTX, onlineTXTime, r, timeRun):
     channelAC = simulation_1.Channel(Alice, Charlie, network)
     channelAC.addPayment(paymentAC)
     
-    # print("network")
-    network.addNodeList([Alice, Bob, Charlie])
-    network.addChannelList([channelAB, channelBC, channelAC])
+    # print("network1")
     network.addPaymentList([paymentAB, paymentBC, paymentAC])
-    network.runNetwork()
-    
 
+    network.runNetwork()
+    # network.printSummary()
 
     a = Alice.getChCostTotal()
     b = Bob.getChCostTotal()
@@ -190,7 +185,7 @@ def networkDirectAC(p, freq, onlineTX, onlineTXTime, r, timeRun):
 
     return (a+c, b)
 
-def networktransferB(p, freq, onlineTX, onlineTXTime, r, timeRun):
+def networktransferB(p, freq, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun = 10.0):
     # network 2 
     network = simulation_1.Network(onlineTX, onlineTXTime, r, timeRun)
     
@@ -205,20 +200,19 @@ def networktransferB(p, freq, onlineTX, onlineTXTime, r, timeRun):
     paymentAC.setTransfer(paymentAC1)
 
     channelAB = simulation_1.Channel(Alice, Bob, network)
-    channelAB.addPayment(paymentAB)
     channelBC = simulation_1.Channel(Bob, Charlie, network)
-    channelBC.addPayment(paymentBC)
 
     # payment goes through Channel AB and BC
-    channelAB.addPayment(paymentAC)
-    channelBC.addPayment(paymentAC1)
+    channelAB.addPaymentList([paymentAB, paymentAC])
+    channelBC.addPaymentList([paymentBC, paymentAC1])
 
 
-    network.addNodeList([Alice, Bob, Charlie])
-    network.addChannelList([channelAB, channelBC])
     network.addPaymentList([paymentAB, paymentBC, paymentAC])
+    network.addTransferredList([paymentAC1])
+
     # print("network2")
     network.runNetwork()
+    # network.printSummary()
     # print([paymentAC2, paymentAC2.numPaid])
 
 
@@ -228,24 +222,28 @@ def networktransferB(p, freq, onlineTX, onlineTXTime, r, timeRun):
 
     return (a+c, b)
 
+def setUp(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun = 10.0):
+    simulation_res = []
+    simulation_res.append(networkOG(p, freq, timeRun=time))
+    simulation_res.append(networkDirectAC(p, freq, timeRun=time))
+    simulation_res.append(networktransferB(p, freq, timeRun=time))
+
+    return simulation_res
+
 ############# Main functions #####################
 
-def run(time):
-    
-        # trial
-        
-    temp = []
-    temp = networkOG(littleP, littleF, onlineTX=5, onlineTXTime=3, r=0.01, timeRun=time)
-    alice0.append(temp[0])
-    bob0.append(temp[1])
-    
-    temp = networkDirectAC(littleP, littleF, onlineTX=5, onlineTXTime=3, r=0.01, timeRun=time)
-    alice1.append(temp[0])
-    bob1.append(temp[1])
+def run(time, num_trial):
 
-    temp = networktransferB(littleP, littleF, onlineTX=5, onlineTXTime=3, r=0.01, timeRun=time)
-    alice2.append(temp[0])
-    bob2.append(temp[1])
+    for i in range(num_trial):
+        temp = setUp(p=littleP, freq=littleF, timeRun = time)
+
+        alice0.append(temp[0][0])
+        bob0.append(temp[0][1])
+        alice1.append(temp[1][0])
+        bob1.append(temp[1][1])
+        alice2.append(temp[2][0])
+        bob2.append(temp[2][1])
+
 
     # if Bob is taking the highest fee he can, then we look at how his costs changes
     # the highest fee Bob can take is Alice's maximum difference of channel costs
@@ -259,32 +257,19 @@ def run(time):
 
     minFee = chargeFee(bob22, bob0)
 
-    print("alice OG")
-    print(alice0)
-    print("alice1")
-    print(alice1)
-    print("alice2")
-    print(alice2)
-    print("bob OG")
-    print(bob0)
-    print("bob1")
-    print(bob1)
-    print("bob2")
-    print(bob2)
+    print("alice OG %f" % (sum(alice0)/len(alice0)))
+    print("alice1 %f" % (sum(alice1)/len(alice1)))
+    print("alice2 %f" % (sum(alice2)/len(alice2)))
+    print("bob OG %f" % (sum(bob0)/len(bob0)))
+    print("bob1 %f" % (sum(bob1)/len(bob1)))
+    print("bob2 %f" % (sum(bob2)/len(bob2)))
     print("\n")
 
-    print("max fee")
-    print(maxFee)
-    print("\n")
+    aliceescape = chargeFee(alice2, alice0)
+    print("alice escapes %f " % (sum(aliceescape)/len(aliceescape)))
+    print("Bob22 %f" % (sum(bob22)/len(bob22)))
 
-    print("alice escapes")
-    print(chargeFee(alice2, alice0))
-    print("Bob22")
-    print(bob22)
-    print("min fee")
-    print(minFee)
-
-    print("maxfee " + str(maxFee) + "; minfee " + str(minFee))
+    print("maxfee %f; minfee %f" %(sum(maxFee)/len(maxFee), sum(minFee)/len(minFee)))
     print("param pay %f ; freq %f" % (littleP, littleF))
 
 
@@ -292,7 +277,7 @@ def run(time):
 
 ################ Call #####################
 
-run(time)
+run(time, num_trial)
 # runWithFreq()
 
 # getFees(0.3, 0.1, time)

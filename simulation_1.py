@@ -22,8 +22,7 @@ class Node(object):
 	    return (isinstance(other, Node) and (self.name == other.name))
 
 	def __repr__(self):
-	    return "%s with cost of %f" % (self.name, self.getChCostTotal())
-
+	    return "%s" % (self.name)
 
 	def addChannel(self, channel):
 		self.channels.append(channel)
@@ -126,6 +125,8 @@ class Channel(object):
 		# super().__init__(A, B, network)
 		self.A = A
 		self.B = B
+		self.network = network
+
 		self.mA = 0
 		self.mB = 0
 		self.balanceA = 0
@@ -133,16 +134,12 @@ class Channel(object):
 		self.paymentsA = []
 		self.paymentsB = []
 		self.numReopen = 0
-		# self.txTimesA = []
-		# self.txTimesB = []
-
-		self.network = network
-
+		
 		self.cost = 0
 		self.transferPayment = []
 
 		A.addChannel(self)
-		B.addChannel(self)		
+		B.addChannel(self)
 
 		Channel.channels.append(self)
 		network.channels.append(self)
@@ -163,10 +160,10 @@ class Channel(object):
 
 	def updateCost(self):
 		# add discounted onlineTx cost to the total cost
+		# Be^(-rt) with continuous compounding
 		self.cost += self.network.onlineTX * math.exp(-1 * self.network.r * (self.network.totalTime - self.network.timeLeft))
 
 	def addPayment(self, payment):
-		# print("add payment in channel " + payment.sender.name + " to " + payment.reciever.name + ", p: %f; f: %f" %(payment.amt, payment.freq))
 		if payment.sender == self.A:
 			# print("addPaymentA")
 			self.paymentsA.append(payment)
@@ -181,7 +178,7 @@ class Channel(object):
 		self.B.addPayment(payment)
 
 		payment.setChannel(self)
-		self.optimizeSize()
+		# self.optimizeSize()
 
 
 	def addPaymentList(self, payments):
@@ -431,55 +428,78 @@ class Network(object):
 	def addTransferredList(self, ps):
 		self.transferredPayments.extend(ps)
 
+	def getNextPayment(self):
+		nextPayment = self.payments[0]
+		nPTime = self.payments[0].nextTime
+
+		for p in self.payments:
+			if p.nextTime < nPTime:
+				nextPayment = p
+				nPTime = p.nextTime
+
+		return nextPayment
+
+	def timeDecrease(self, pm, time):
+		self.timeLeft -= time
+		for p in self.payments:
+			if p != pm:
+				p.nextTime -= time
+
+
 	def runNetwork(self):
 		# payments can be concurrent on different channels
 		# the payment that takes the smallest time should be processed first
 		# and when it has been processed, all other payments' interval decrement by the interval of the processed payment
 		# and the processed payment has a new interval that gets put into the timeline
 		
+		# initialize the channels
 		for c in self.channels:
 			c.optimizeSize()
+			
+			self.history.append(( 
+				"Time %03f, initialize channel %s to %s, %f" 
+				%(self.timeLeft, c.A.name, c.B.name, c.cost)))
+
 
 		while self.timeLeft >= 0:
 			# print(self.timeLeft)
-			nextPayment = self.payments[0]
-			nPTime = self.payments[0].nextTime
-			for p in self.payments:
-				# print(p)
-				# print("looping")
+			nextPayment = self.getNextPayment()
+			nPTime = nextPayment.nextTime
 				
-				if p.nextTime < nPTime:
-					nextPayment = p
-					nPTime = p.nextTime
-				
+			# even the soonest payment is out of time
 			if nPTime > self.timeLeft:
 				break
 
 			# process the next payment in the channel
-			# the channel checks for the channel balance, reopen if balance not enough
+			# true if processed, false if reopen due to balance 
 			# print(nextPayment)
 			if (nextPayment.channel.processPayment(nextPayment)):
 				# print("time:" + str(self.timeLeft))
 				# print("next payment")
 				# print(nextPayment)
-				self.timeLeft -= nPTime
-				for p in self.payments:
-					# print("decrement %s %f " %(nextPayment, self.timeLeft))
-					if p != nextPayment:
-						p.nextTime -= nPTime
-					# print("decreasing time")
+
+				# decrease the time of all other payments 
+				self.timeDecrease(nextPayment, nPTime)
+
+				self.history.append(( 
+					"Time %03f, processed %dth %s to %s (f: %03f, p: %03f)" 
+					%(self.timeLeft, nextPayment.numProcessed, nextPayment.sender.name, 
+						nextPayment.reciever.name, nextPayment.freq, nextPayment.amt)))
+				# without waiting, do the transfer
 				if nextPayment.transferTo != None:
 					# print("----- transfer")
 					# print(nextPayment.transferTo)
 					nextPayment.transferTo.channel.processTransfer(nextPayment.transferTo)
-
-				# self.history.append((self.timeLeft, nextPayment, nextPayment.channel.balanceA, nextPayment.channel.balanceB))
+					self.history.append(( 
+						"Time %03f, transfer %dth %s to %s (f: %03f, p: %03f)" 
+						%(self.timeLeft, nextPayment.transferTo.numProcessed, nextPayment.transferTo.sender.name, 
+							nextPayment.transferTo.reciever.name, nextPayment.transferTo.freq, nextPayment.transferTo.amt)))
 			else:
 				# attempt to send failed, payment not processed
 				errorTime = 0.001
-				self.timeLeft -= errorTime
-				for p in self.payments:
-					p.nextTime -= errorTime
+				self.timeDecrease(nextPayment, errorTime)
+				self.history.append(("Time %03f, reopen %s with %s, size (%03f, %03f)" 
+					%(self.timeLeft, nextPayment.sender.name, nextPayment.reciever.name, nextPayment.channel.mA, nextPayment.channel.mB)))
 
 
 		# self.printSummary()
@@ -487,8 +507,9 @@ class Network(object):
 
 			
 	def printSummary(self):
-		print("Summary")
-		print("Timeleft: %f" %self.timeLeft)
+		print("history")
+		print(np.array(self.history))
+		print("Summary; Timeleft: %f" %self.timeLeft)
 		print(" - Nodes: ")
 		for n in self.nodes:
 			print(n)

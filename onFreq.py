@@ -1,4 +1,4 @@
-from simulation_1 import main
+import simulation_1
 import random
 import matplotlib
 matplotlib.use('Agg')
@@ -14,14 +14,17 @@ import matplotlib.transforms as mtransforms
 
 alice0, bob0, alice1, bob1, alice2, bob2 = [], [], [], [], [], []
 
-num_trial = 200
+num_trial = 100
 
 time = 50
 
-paymentMean = 0.5
+paymentMean = 0.8
 
 paymentSigma = 0.0001
 
+largeFrequency = 1.0
+
+largePayments = 1.0
 
 
 ############ Helper functions ################
@@ -89,8 +92,6 @@ def getIntercepts(list, ps):
 
     return points
 
-
-
 def getMaxFee(a0, a1):
     return a1 - a0
 
@@ -98,20 +99,135 @@ def getMinFee(a0, a2, b0, b2):
     b22 = b2 + a2 - a0
     return b22 - b0
 
-
 def getFees(ps, f, time):
     # (a0+c0, b0, a1+c1, b1, a2+c2, b2)
     #    a0   b0   a1    b1   a2   b2
-    temp = main(p=ps, freq=f, timeRun = time)
+    temp = setUp(p=ps, freq=f, timeRun = time)
     return (getMaxFee(temp[0], temp[2]), getMinFee(temp[0], temp[4], temp[1], temp[5]))
 
+def getExpectedTx(list):
+    res = [0 for i in range(len(list))]
+    for i in range(len(list)):
+        res[i] = 1/list[i]
 
+    return res
+
+
+
+def networkOG(p, freq, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun = 10.0):
+    # a star / fork network
+    network = simulation_1.Network(onlineTX, onlineTXTime, r, timeRun)
+    
+    Alice = simulation_1.Node("Alice", network)
+    Bob = simulation_1.Node("Bob", network)
+    Charlie = simulation_1.Node("Charlie", network)
+
+    paymentAB = simulation_1.Payment(largeFrequency, largePayments, Alice, Bob)
+    paymentBC = simulation_1.Payment(largeFrequency, largePayments, Bob, Charlie)
+
+    channelAB = simulation_1.Channel(Alice, Bob, network)
+    channelBC = simulation_1.Channel(Bob, Charlie, network)
+
+    channelAB.addPaymentList([paymentAB])
+    channelBC.addPaymentList([paymentBC])
+
+    
+    network.addPaymentList([paymentAB, paymentBC])
+    # print("network0")
+    network.runNetwork()
+    # network.printSummary()
+
+    a = Alice.getChCostTotal()
+    b = Bob.getChCostTotal()
+    c = Charlie.getChCostTotal()
+
+    return (a+c, b)
+
+def networkDirectAC(p, freq, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun = 10.0):
+    # set up the network
+    network = simulation_1.Network(onlineTX, onlineTXTime, r, timeRun)
+
+    Alice = simulation_1.Node("Alice", network)
+    Bob = simulation_1.Node("Bob", network)
+    Charlie = simulation_1.Node("Charlie", network)
+
+    paymentAB = simulation_1.Payment(largeFrequency, largePayments, Alice, Bob)
+    paymentBC = simulation_1.Payment(largeFrequency, largePayments, Bob, Charlie)
+    paymentAC = simulation_1.Payment(freq, p, Alice, Charlie)
+
+    channelAB = simulation_1.Channel(Alice, Bob, network)
+    channelAB.addPayment(paymentAB)
+    channelBC = simulation_1.Channel(Bob, Charlie, network)
+    channelBC.addPayment(paymentBC)
+
+    # Alice creates a direct channel for network 1
+    channelAC = simulation_1.Channel(Alice, Charlie, network)
+    channelAC.addPayment(paymentAC)
+    
+    # print("network1")
+    network.addPaymentList([paymentAB, paymentBC, paymentAC])
+
+    network.runNetwork()
+    # network.printSummary()
+
+    a = Alice.getChCostTotal()
+    b = Bob.getChCostTotal()
+    c = Charlie.getChCostTotal()
+
+    return (a+c, b)
+
+def networktransferB(p, freq, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun = 10.0):
+    # network 2 
+    network = simulation_1.Network(onlineTX, onlineTXTime, r, timeRun)
+    
+    Alice = simulation_1.Node("Alice", network)
+    Bob = simulation_1.Node("Bob", network)
+    Charlie = simulation_1.Node("Charlie", network)
+
+    paymentAB = simulation_1.Payment(largeFrequency, largePayments, Alice, Bob)
+    paymentBC = simulation_1.Payment(largeFrequency, largePayments, Bob, Charlie)
+    paymentAC = simulation_1.Payment(freq, p, Alice, Bob)
+    paymentAC1 = simulation_1.Payment(freq, p, Bob, Charlie)
+    paymentAC.setTransfer(paymentAC1)
+
+    channelAB = simulation_1.Channel(Alice, Bob, network)
+    channelAB.addPayment(paymentAB)
+    channelBC = simulation_1.Channel(Bob, Charlie, network)
+    channelBC.addPayment(paymentBC)
+
+    # payment goes through Channel AB and BC
+    channelAB.addPayment(paymentAC)
+    channelBC.addPayment(paymentAC1)
+
+
+    network.addPaymentList([paymentAB, paymentBC, paymentAC])
+    network.addTransferredList([paymentAC1])
+
+    # print("network2")
+    network.runNetwork()
+    # network.printSummary()
+    # print([paymentAC2, paymentAC2.numPaid])
+
+
+    a = Alice.getChCostTotal()
+    b = Bob.getChCostTotal()
+    c = Charlie.getChCostTotal()
+
+    return (a+c, b)
+
+def setUp(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun = 10.0):
+    simulation_res = []
+    simulation_res.append(networkOG(p, freq, timeRun=time))
+    simulation_res.append(networkDirectAC(p, freq, timeRun=time))
+    simulation_res.append(networktransferB(p, freq, timeRun=time))
+
+    return simulation_res
         
 
 ############# Main functions #####################
 
 def runWithFreq(time):
-    fs = [x* 2.0 /1 for x in range(1, 50)]
+    fs = [x* 1.0 /100 for x in range(1, 50)]
     print("fs %f to %f" %(fs[0], fs[-1]))
 
     for i in range(len(fs)):
@@ -120,8 +236,10 @@ def runWithFreq(time):
         res = [0, 0, 0, 0, 0, 0]
         temp = []
         for k in range(num_trial):
-            pm = np.random.lognormal(paymentMean, paymentSigma)
-            temp = main(p=pm, freq=fs[i], timeRun = time)
+            pm = np.random.exponential(paymentMean)
+            # print("pm: %f; f: %f" %(pm, fs[i]))
+            tmp = setUp(p=pm,  freq=fs[i], timeRun = time)
+            temp = list(np.concatenate(tmp).flat)
             for j in range(len(temp)):
                 res[j] += temp[j]
         for j in range(len(res)):
@@ -160,32 +278,43 @@ def runWithFreq(time):
     print(bob2)
     print("\n")
 
-    print("max fee")
-    print(maxFee)
-    print("\n")
-
     print("alice escapes")
     print(chargeFee(alice2, alice0))
     print("Bob22")
     print(bob22)
+    print("\n")
+
+    print("max fee")
+    print(maxFee)
     print("min fee")
     print(minFee)
+
 
 
     print("max min diff" + str(chargeFee(maxFee, minFee)))
     print("param P " + str(paymentMean))
     
 
+    # expectedTx = getExpectedTx(fs)
+    diff = chargeFee(maxFee, minFee)
 
-
+    # inter = getIntersections(maxFee, minFee, expectedTx)
     inter = getIntersections(maxFee, minFee, fs)
 
 
-    titles = ['Maximum fee and minimum fee vs frequency']
+    titles = ['Maximum fee and minimum fee vs number of transactions']
     # Zs = [(aliceBenefit_max, bobBenefit_max), (aliceBenefit_min, bobBenefit_min)]
-    xlabels = ['frequency (lambda)']
+    xlabels = [' (expected) number of transactions within 1 time period']
 
     fig = plt.figure(figsize=plt.figaspect(0.5))
+    # maxFee.reverse()
+    # minFee.reverse()
+
+
+
+    # print(expectedTx)
+    # print(maxFee)
+    # print(minFee)
 
     for i in range(0, 1):
         ax = fig.add_subplot(1, 1, i+1)
@@ -194,6 +323,8 @@ def runWithFreq(time):
 
         ax.plot(fs, maxFee, "k--")
         ax.plot(fs, minFee, "r-.")
+        ax.plot(fs, diff, "b")
+        ax.plot(fs, [0 for x in range(len(fs))])
 
         for pt in range(len(inter)):
             label = '({:.3f}, {:.3f})'.format(inter[pt][0], inter[pt][1])
@@ -205,18 +336,15 @@ def runWithFreq(time):
 
         fig.text(0, 0, 'Trials: %d; Time: %d; Payment mean: %0.2f' % (num_trial, time, paymentMean))
         ax.set_title(titles[i])
-        fig.legend(["maximum fee", "minimum fee"])
+        fig.legend(["maximum fee", "minimum fee", "difference between max and min"])
 
 
     fig.savefig('3nodemaxminFreq.png')
 
 
-    print("checking")
-    for pt in range(len(inter)):
-        print(inter[pt])
-        print("gives")
-
-        print(getFees(paymentMean, inter[pt][0], time))
+    # print("checking")
+    # for pt in range(len(inter)):
+    #     print(str(inter[pt]) + "gives fee" + str(getFees(paymentMean, inter[pt][0], time)))
 
 
     # print("mannual")
