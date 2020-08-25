@@ -1,4 +1,5 @@
 import simulation_1
+from simulation_1 import mainOppo
 import random
 import matplotlib
 matplotlib.use('Agg')
@@ -14,11 +15,11 @@ import matplotlib.transforms as mtransforms
 
 alice0, bob0, alice1, bob1, alice2, bob2 = [], [], [], [], [], []
 
-num_trial = 100
+num_trial = 20
 
 time = 50
 
-paymentMean = 0.8
+paymentMean = 0.5
 
 paymentSigma = 0.0001
 
@@ -78,6 +79,8 @@ def getIntersections(list1, list2, ps):
             or ((list1[i-1] < list2[i-1]) and (list1[i] > list2[i]))):
             points.append((ps[i], (list1[i-1]+list1[i])/2))
 
+    if len(points)>2:
+        return [points[0], points[-1]]
     return points
 
 def getIntercepts(list, ps):
@@ -90,6 +93,8 @@ def getIntercepts(list, ps):
             or (((list[i-1] < 0) and (list[i] > 0)))):
             points.append(((ps[i]+ps[i-1])/2, 0))
 
+    if len(points)>2:
+        return [points[0], points[-1]]
     return points
 
 def getMaxFee(a0, a1):
@@ -222,12 +227,13 @@ def setUp(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun
     simulation_res.append(networktransferB(p, freq, timeRun=time))
 
     return simulation_res
-        
+
+
 
 ############# Main functions #####################
 
-def runWithFreq(time):
-    fs = [x* 1.0 /100 for x in range(1, 50)]
+def runWithFreq(time, interest, B):
+    fs = [x* 2.0 /1 for x in range(1, 260)]
     print("fs %f to %f" %(fs[0], fs[-1]))
 
     for i in range(len(fs)):
@@ -238,7 +244,7 @@ def runWithFreq(time):
         for k in range(num_trial):
             pm = np.random.exponential(paymentMean)
             # print("pm: %f; f: %f" %(pm, fs[i]))
-            tmp = setUp(p=pm,  freq=fs[i], timeRun = time)
+            tmp = setUp(p=pm,  freq=fs[i], timeRun = time, r = interest, onlineTX = B)
             temp = list(np.concatenate(tmp).flat)
             for j in range(len(temp)):
                 res[j] += temp[j]
@@ -295,67 +301,71 @@ def runWithFreq(time):
     print("param P " + str(paymentMean))
     
 
-    # expectedTx = getExpectedTx(fs)
+    expectedTx = getExpectedTx(fs)
     diff = chargeFee(maxFee, minFee)
 
-    # inter = getIntersections(maxFee, minFee, expectedTx)
-    inter = getIntersections(maxFee, minFee, fs)
+    inter = getIntercepts(diff, expectedTx)
+    
 
 
-    titles = ['Maximum fee and minimum fee vs number of transactions']
+    titles = ['Maximum fee and minimum fee vs number of transactions', 'Maximum fee and minimum fee vs frequency']
     # Zs = [(aliceBenefit_max, bobBenefit_max), (aliceBenefit_min, bobBenefit_min)]
-    xlabels = [' (expected) number of transactions within 1 time period']
-
-    fig = plt.figure(figsize=plt.figaspect(0.5))
+    xlabels = [' (expected) number of transactions within 1 time period', 'frequency (lambda, time between two payments) ']
     # maxFee.reverse()
     # minFee.reverse()
 
 
+    fig = plt.figure(figsize=plt.figaspect(0.5))
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_xlabel(xlabels[0])
+    ax.set_title(titles[0])
+    ax.set_ylabel('fee')
 
-    # print(expectedTx)
-    # print(maxFee)
-    # print(minFee)
+    ax.semilogx(expectedTx, maxFee, "k--")
+    ax.semilogx(expectedTx, minFee, "r-.")
+    ax.semilogx(expectedTx, diff, "b")
+    ax.semilogx(expectedTx, [0 for x in range(len(expectedTx))])
+    ax.axvline(interest/B)
 
-    for i in range(0, 1):
-        ax = fig.add_subplot(1, 1, i+1)
-        ax.set_xlabel(xlabels[i])
-        ax.set_ylabel('fee')
+    for pt in range(len(inter)):
+        label = '({:.3f}, {:.3f})'.format(inter[pt][0], inter[pt][1])
+        ax.annotate(label, (inter[pt][0], inter[pt][1]),
+            textcoords="offset points",
+            xytext = (2,2),
+            rotation=45)
 
-        ax.plot(fs, maxFee, "k--")
-        ax.plot(fs, minFee, "r-.")
-        ax.plot(fs, diff, "b")
-        ax.plot(fs, [0 for x in range(len(fs))])
-
-        for pt in range(len(inter)):
-            label = '({:.3f}, {:.3f})'.format(inter[pt][0], inter[pt][1])
-            ax.annotate(label, (inter[pt][0], inter[pt][1]),
-                textcoords="offset points",
-                xytext = (2,2),
-                rotation=45)
-
-
-        fig.text(0, 0, 'Trials: %d; Time: %d; Payment mean: %0.2f' % (num_trial, time, paymentMean))
-        ax.set_title(titles[i])
-        fig.legend(["maximum fee", "minimum fee", "difference between max and min"])
+    fig.text(0, 0, 'Trials: %d; Time: %d; Payment mean: %0.2f' % (num_trial, time, paymentMean))
+    fig.legend(["maximum fee", "minimum fee", "difference between max and min"])
+    fig.savefig('3n_f0.png')
 
 
-    fig.savefig('3nodemaxminFreq.png')
 
+    inter = getIntercepts(diff, fs)
 
-    # print("checking")
-    # for pt in range(len(inter)):
-    #     print(str(inter[pt]) + "gives fee" + str(getFees(paymentMean, inter[pt][0], time)))
+    fig2 = plt.figure(figsize=plt.figaspect(0.5))
+    ax = fig2.add_subplot(1, 1, 1)
+    ax.set_xlabel(xlabels[1])
+    ax.set_ylabel('fee')
 
+    ax.plot(fs, maxFee, "k--")
+    ax.plot(fs, minFee, "r-.")
+    ax.plot(fs, diff, "b")
+    ax.plot(fs, [0 for x in range(len(fs))])
+    ax.axvline(B/interest)
 
-    # print("mannual")
-    # res = [[],[]]
-    # for i in range(100):
-    #     tmp = getFees(0.3, 0.1, time)
-    #     res[0].append(tmp[0])
-    #     res[1].append(tmp[1])
-    # print(sum(res[0]), sum(res[1]))
+    for pt in range(len(inter)):
+        label = '({:.3f}, {:.3f})'.format(inter[pt][0], inter[pt][1])
+        ax.annotate(label, (inter[pt][0], inter[pt][1]),
+            textcoords="offset points",
+            xytext = (2,2),
+            rotation=45)
+
+    fig2.text(0, 0, 'Trials: %d; Time: %d; Payment mean: %0.2f' % (num_trial, time, paymentMean))
+    ax.set_title(titles[1])
+    fig2.legend(["maximum fee", "minimum fee", "difference between max and min"])
+    fig2.savefig('3n_f2.png')
 
 ################ Call #####################
 
-runWithFreq(time)
-# runWithFreq()
+runWithFreq(time, 0.01, 5.0)
+

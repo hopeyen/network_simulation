@@ -134,16 +134,9 @@ fsIncre = 10
 ############# Main functions #####################
 
 def runWithPayment(time, r, B, type):
-    # 0.2 to 1.2
-    # ps = [np.random.exponential(x * 1.0 /100) for x in range(psInit, psInit+psLen)]
-    # 0.25 to 1.25
-    # fs = [np.random.exponential(x * 1.0 /100) for x in range(fsInit, fsInit+fsLen)]
-    ps = [x * 1.0 /100 for x in range(psInit, psInit+psLen)]
+    ps = [x * 2.0 /10 for x in range(psInit, psInit+psLen)]
     # # 0.25 to 1.25
-    fs = [x * 1.0 /100 for x in range(fsInit, fsInit+fsLen)]
-
-    # random.expovariate(givenP)
-    # ps = np.arange(0.0, 1.0 + 0.01, 0.01)
+    fs = [x * 2.0 /10 for x in range(fsInit, fsInit+fsLen)]
 
     X = np.array(ps)
     Y = np.array(fs)
@@ -176,7 +169,6 @@ def runWithPayment(time, r, B, type):
     #         # alice2         costs[4] 
     #         # bob2           costs[5] 
 
-    # print(costs)
     maxFee = chargeFee(costs[2], costs[0])
     
     # aliceAfter_max = payFee(alice0, maxFee)
@@ -193,8 +185,6 @@ def runWithPayment(time, r, B, type):
     U = np.array(minFee)
     W = np.array(diff)
 
-    # print(maxFee)
-    # print(minFee)
 
     # returns a list of (ps, fs, pt)
     inter = getIntersections(maxFee, minFee, ps, fs)
@@ -214,9 +204,6 @@ def runWithPayment(time, r, B, type):
             'Payment vs Frequency\n vs Minimum fee bound',
             'Payment vs Frequency\n vs fee bound difference']
     Zs = [Z, U, W]
-
-
-
 
     titles_users = ['alice0', 'bob0', 'alice1', 'bob1', 'alice2', 'bob2']
     index = 1
@@ -249,13 +236,7 @@ def runWithPayment(time, r, B, type):
     ax.set_ylabel('Frequency')
     ax.set_zlabel("Fee Bound Difference")
     ax.set_title(titles[2])
-    # ax.view_init(azim=0, elev=90)        
-    
 
-    # ax.plot_surface(X, Y, Z, zorder=2, rstride=1, cstride=1, cmap=cm.coolwarm,
-    #                    linewidth=0, antialiased=False)
-
-    
     surf = ax.plot_surface(X, Y, Zs[2], zorder=1, rstride=1, cstride=1, cmap=cm.coolwarm,
                        linewidth=0, antialiased=False)
     fig2.colorbar(surf, shrink=0.5, aspect=10)
@@ -264,22 +245,6 @@ def runWithPayment(time, r, B, type):
 
 
     fig2.savefig('3node_pfOppo%d.png'%type)
-
-    # fig2 = plt.figure(figsize=plt.figaspect(0.5))
-    # for i in range(0, 3):
-    #     ax = fig2.add_subplot(2, 2, i+1, projection='3d')
-    #     ax.set_xlabel('Payment size')
-    #     ax.set_ylabel('Frequency')
-    #     ax.set_zlabel("Fee Bound")
-    #     ax.set_title(titles[i])
-    #     # ax.view_init(azim=0, elev=90)        
-        
-    #     surf = ax.plot_surface(X, Y, Zs[i], rstride=1, cstride=1, cmap=cm.coolwarm,
-    #                        linewidth=0, antialiased=False)
-    #     fig2.colorbar(surf, shrink=0.5, aspect=10)
-
-
-    # fig2.savefig('3node_pf.png')
 
     intercepts = getIntercepts(diff, ps, fs)
     intercepts = np.transpose(np.array(intercepts))
@@ -358,7 +323,7 @@ def runWithPayment(time, r, B, type):
 
 ################ Call #####################
 
-runWithPayment(time, 0.01, 5.0, 0)
+# runWithPayment(time, 0.01, 5.0, 0)
 # runWithFreq()
 
 

@@ -83,3 +83,35 @@ def transform(points):
 
     return (xs, ys)
 
+
+def getIntersections(list1, list2, ps, fs):
+    points = []
+
+    for i in range(1, len(list1)):
+        for j in range(1, len(list1[i])):
+            if list1[i][j] == list2[i][j]:
+                points.append([ps[i], fs[j], list2[i][j]])
+            elif (((list1[i][j-1] > list2[i][j-1]) and (list1[i][j] < list2[i][j]))
+                or ((list1[i][j-1] < list2[i][j-1]) and (list1[i][j] > list2[i][j]))):
+                points.append([ps[i], fs[j], (list1[i][j-1]+list1[i][j])/2])
+            elif (((list1[i-1][j] > list2[i-1][j]) and (list1[i][j] < list2[i][j]))
+                or ((list1[i-1][j] < list2[i-1][j]) and (list1[i][j] > list2[i][j]))):
+                points.append([ps[i], fs[j], (list1[i][j-1]+list1[i][j])/2])
+
+
+    return points
+
+def getIntercepts(list, ps, fs):
+    points = []
+
+    for i in range(1, len(ps)):
+        for j in range(1, len(fs)):
+            if list[i][j] == 0:
+                points.append((ps[i], fs[j], 0))
+            elif (((list[i-1][j] < 0) or (list[i][j-1] < 0)) and (list[i][j] > 0)):
+                points.append((ps[i], fs[j], 0))
+            elif (((list[i-1][j] > 0) or (list[i][j-1] > 0)) and (list[i][j] < 0)):
+                points.append((ps[i], fs[j], 0))
+
+
+    return points

@@ -17,7 +17,7 @@ import helpersMatrix
 
 # network
 
-num_trial = 10
+num_trial = 100
 
 time = 10
 
@@ -27,9 +27,9 @@ largePayment = 1
 
 psInit = 1
 
-psLen = 50
+psLen = 10
 
-psdivision = 10
+psdivision = 1
 
 psmultiply = 1.0
 
@@ -39,9 +39,9 @@ largeFrequency = 1
 
 fsInit = 1
 
-fsLen = 50
+fsLen = 10
 
-fsdivision = 100
+fsdivision = 1
 
 fsmultiply = 1.0
 
@@ -406,238 +406,7 @@ def setUpPF_star2(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01,
     return simulation_res
 
 ############# Main functions #####################
-# def graphPF_Star(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun = 10.0):
-#     # 0.2 to 1.2    
-#     ps = [x* psmultiply /psdivision for x in range(psInit, psInit+psLen)]
-#     # ps = [x* 1.0 / 1 for x in range(1, 30)]
-#     # 0.25 to 1.25
-#     fs = [x* fsmultiply /fsdivision for x in range(fsInit, fsInit+fsLen)]
-
-#     maxFee = [[0 for x in range(len(ps))] for x in range(len(fs))]
-#     minFee = [[0 for x in range(len(ps))] for x in range(len(fs))]
-#     diff = [[0 for x in range(len(ps))] for x in range(len(fs))]
-
-    
-#     for i in range(len(fs)):
-#         print(i)
-#         for j in range(len(ps)):
-#             print("-star %d-%d" %(i, j))
-#             # res = [0 for x in range(2)] 
-#             maxF, minF, diffTemp = 0, 0, 0
-
-#             for k in range(num_trial):
-#                 # setup returns ((a0,b0), (aTransfer, bTransfer), (aDirect, bDirect))
-#                 tmp = setUpPF_star(p=ps[j], freq=fs[i], timeRun = timeRun)
-#                 # temp = [tmp[1][0]-tmp[0][0], tmp[0][1]-tmp[1][1]]
-
-#                 # for h in range(len(temp)):
-#                 #     res[h] += temp[h]
-
-#                 maxF += tmp[2][0] - tmp[0][0]
-#                 bob22 = tmp[1][1] + (tmp[1][0] - tmp[0][0])
-#                 minF += bob22 - tmp[0][1]
-                
-
-#             # print((maxFee[i][j] - minFee[i][j]))
-#             # for h in range(len(temp)):
-#             #     res[h]= res[h]/float(num_trial)
-#             maxFee[i][j] = (maxF/num_trial)
-#             minFee[i][j] = (minF/num_trial)
-#             diff[i][j] = (maxFee[i][j] - minFee[i][j])
-
-#     X = np.array(ps)
-#     Y = np.array(fs)
-#     X, Y = np.meshgrid(X, Y)
-#     Z = np.array(maxFee)
-#     U = np.array(minFee)
-#     W = np.array(diff)
-
-
-#     fig2 = plt.figure(figsize=plt.figaspect(0.5))
-   
-#     ax = fig2.add_subplot(1, 1, 1, projection='3d')
-#     ax.set_xlabel('Payment size')
-#     ax.set_ylabel('Frequency')
-#     ax.set_zlabel("Fee Bound Difference")
-#     ax.set_title("4 node fee bound differences vs payment size vs frequency")
-#     ax.view_init(azim=0, elev=90)        
-#     fig2.text(0, 0, 'trials: %d; Time: %d' % (num_trial, time))
-#     surf = ax.plot_surface(X, Y, W, rstride=1, cstride=1, cmap=cm.coolwarm,
-#                        linewidth=0, antialiased=False)
-#     fig2.colorbar(surf, shrink=0.5, aspect=10)
-
-
-#     fig2.savefig('4node_pf.png')
-
-#     intercepts = helpersMatrix.getIntercepts(diff, ps, fs)
-#     intercepts = np.transpose(np.array(intercepts))
-
-                        
-#     if (len(intercepts) != 0):
-#         print("intercepts")
-#         print(intercepts)
-
-
-#         fig3 = plt.figure(figsize=plt.figaspect(0.5))
-
-#         ax = fig3.add_subplot(1, 1, 1)
-        
-#         ax.set_xlabel('Payment size')
-#         ax.set_ylabel('Frequency')
-#         ax.set_title("Intersection points")
-
-#         ax.scatter(intercepts[0], intercepts[1], marker='o')
-
-
-#         fig3.text(0, 0, 'trials: %d; Time: %d' % (num_trial, time))
-#         fig3.savefig('4node_pf_inter.png')
-
-
-    
-
-
-# def graphPF_Star2(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun = 10.0):
-#     # 0.2 to 1.2    
-#     ps = [x* psmultiply /psdivision for x in range(psInit, psInit+psLen)]
-#     # ps = [x* 1.0 / 1 for x in range(1, 30)]
-#     # 0.25 to 1.25
-#     fs = [x* fsmultiply /fsdivision for x in range(fsInit, fsInit+fsLen)]
-
-#     costOnPay = [[0 for x in range(len(ps))] for x in range(0, 4)]
-#     costOnFreq = [[0 for x in range(len(fs))] for x in range(0, 4)]
-    
-#     for i in range(len(fs)):
-#         print(i)
-#         for j in range(len(ps)):
-#             print("--star %d-%d" %(i, j))
-#             res = [0 for x in range(2)] 
-            
-#             for k in range(num_trial):
-#                 # get the average of the trial given certain freq and p
-#                 tmp = setUpPF_star2(p=ps[j], freq=fs[i], timeRun = timeRun)
-#                 temp = [tmp[1][0]-tmp[0][0], tmp[0][1]-tmp[1][1]]
-
-#                 for h in range(len(temp)):
-#                     res[h] += temp[h]
-#                 for h in range(len(temp)):
-#                     res[h]= res[h]/float(num_trial)
-
-#                     # get cost for certain p and freq regardless of the other parameter
-#                     costOnPay[h][j] += res[h]
-#                     costOnFreq[h][i] += res[h]
-#         # finished generating all p on certain freq, get cost based on freq
-#     for i in range(len(costOnFreq)):
-#         for h in range(len(costOnFreq[i])):
-#             costOnFreq[i][h] /= len(fs)
-#     for i in range(len(costOnPay)):
-#         for h in range(len(costOnPay[i])):
-#             # finished generting all freq on certain p
-#             costOnPay[i][h] /= len(ps)
-    
-
-#     fig = plt.figure(figsize=[6.4, 12.8])
-
-#     # based on payment
-#     ax = fig.add_subplot(2,1, 1)
-#     ax.set_xlabel('Payment size')
-#     ax.set_ylabel('benefit')
-#     ax.set_title('benefit of the transfer in star vs payment size')
-
-#     for i in range(0, 2):
-#         surf = ax.plot(ps, costOnPay[i])
-
-#     ax.legend(["alice", "bob"]) 
-
-#     # based on frequency
-#     ax = fig.add_subplot(2,1, 2)
-#     ax.set_xlabel('frequency (lambda)')
-#     ax.set_ylabel('benefit')
-#     ax.set_title('benefit of the transfer in star vs frequency')
-
-#     for i in range(0, 2):
-#         surf = ax.plot(fs, costOnFreq[i])
-    
-#     ax.legend(["alice", "bob"]) 
-    
-
-#     fig.text(0, 0, 'trials: %d; Time: %d; pD: %d; pM: %f; fD: %d; fM: %f' % (num_trial, time, psdivision, psmultiply, fsdivision, fsmultiply))
-#     fig.savefig('4node_fee_star2_0.png')
-
-
-
-# def graphPF_Cycle(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun = 10.0):
-#     # 0.2 to 1.2    
-#     ps = [x* psmultiply /psdivision for x in range(psInit, psInit+psLen)]
-#     # ps = [x* 1.0 / 1 for x in range(1, 30)]
-#     # 0.25 to 1.25
-#     fs = [x* fsmultiply /fsdivision for x in range(fsInit, fsInit+fsLen)]
-
-#     costOnPay = [[0 for x in range(len(ps))] for x in range(0, 2)]
-#     costOnFreq = [[0 for x in range(len(fs))] for x in range(0, 2)]
-#     for i in range(len(fs)):
-#         print(i)
-#         for j in range(len(ps)):
-#             print("-cycle %d-%d" %(i, j))
-#             res = [0 for x in range(0, 2)]
-
-#             for k in range(num_trial):
-#                 # get the average of the trial given certain freq and p
-#                 tmp = setUpPF_cycle(p=ps[j], freq=fs[i], timeRun = timeRun)
-#                 temp = [tmp[0][0]-tmp[1][0], tmp[1][1]-tmp[0][1]]
-
-#                 for h in range(len(temp)):
-#                     res[h] += temp[h]
-#                 for h in range(len(temp)):
-#                     res[h]= res[h]/float(num_trial)
-
-#                     # # get cost for certain p and freq regardless of the other parameter
-#                     # print(costOnPay[h][j])
-#                     # print(res[h])
-#                     costOnPay[h][j] += res[h]
-#                     costOnFreq[h][i] += res[h]
-#                                     # costOnPay[j] += res[h]
-#                 # costOnFreq[i] += res[h]
-        
-#     # get average to avoid counting for payment size
-#     for i in range(len(costOnFreq)):
-#         for h in range(len(costOnFreq[i])):
-#             costOnFreq[i][h] /= len(fs)
-#     for i in range(len(costOnPay)):
-#         for h in range(len(costOnPay[i])):
-#             # finished generting all freq on certain p
-#             costOnPay[i][h] /= len(ps)
-    
-
-#     fig = plt.figure(figsize=[6.4, 12.8])
-
-#     # based on payment
-#     ax = fig.add_subplot(2,1, 1)
-#     ax.set_xlabel('Payment size')
-#     ax.set_ylabel('benefit')
-#     ax.set_title('benefit of the transfer in cycle vs payment size')
-
-#     for i in range(0, 2):
-#         surf = ax.plot(ps, costOnPay[i])
-
-#     ax.legend(["alice", "bob"]) 
-
-#     # based on frequency
-#     ax = fig.add_subplot(2,1, 2)
-#     ax.set_xlabel('frequency (lambda)')
-#     ax.set_ylabel('benefit')
-#     ax.set_title('benefit of the transfer in cycle vs frequency')
-
-#     for i in range(0, 2):
-#         surf = ax.plot(fs, costOnFreq[i])
-    
-#     ax.legend(["alice", "bob"]) 
-
-#     fig.text(0, 0, 'trials: %d; Time: %d; psdiv: %d; psmulti: %f; fsdiv: %d; fsmulti: %f' % (num_trial, time, psdivision, psmultiply, fsmultiply, fsdivision))
-#     fig.savefig('4node_fee_cycle.png')
-
-
-
-def graphPF(type, p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun = 10.0):
+def graphPF_Star(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun = 10.0):
     # 0.2 to 1.2    
     ps = [x* psmultiply /psdivision for x in range(psInit, psInit+psLen)]
     # ps = [x* 1.0 / 1 for x in range(1, 30)]
@@ -650,21 +419,16 @@ def graphPF(type, p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01,
 
     
     for i in range(len(fs)):
-        # print(i)
+        print(i)
         for j in range(len(ps)):
-            print("%d-%d" %(i, j))
-            # res = [0 for x in range(2)] 
-            maxF, minF, diffTemp = 0, 0, 0
-
+            print("-star %d-%d" %(i, j))
+            res = [0 for x in range(2)] 
+            maxF = 0
+            minF = 0
+            diffTemp = 0
             for k in range(num_trial):
-                print("%d-%d-%d" %(i, j, k))
                 # setup returns ((a0,b0), (aTransfer, bTransfer), (aDirect, bDirect))
-                if type == 0:
-                    tmp = setUpPF_star(p=ps[j], freq=fs[i], timeRun = timeRun)
-                elif type == 1:
-                    tmp = setUpPF_star2(p=ps[j], freq=fs[i], timeRun = timeRun)    
-                else: 
-                    tmp = setUpPF_cycle(p=ps[j], freq=fs[i], timeRun = timeRun)               
+                tmp = setUpPF_star(p=ps[j], freq=fs[i], timeRun = timeRun)
                 # temp = [tmp[1][0]-tmp[0][0], tmp[0][1]-tmp[1][1]]
 
                 # for h in range(len(temp)):
@@ -673,18 +437,17 @@ def graphPF(type, p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01,
                 maxF += tmp[2][0] - tmp[0][0]
                 bob22 = tmp[1][1] + (tmp[1][0] - tmp[0][0])
                 minF += bob22 - tmp[0][1]
-                
+                diffTemp += (maxF - minF)
 
-            # print((maxFee[i][j] - minFee[i][j]))
+
             # for h in range(len(temp)):
             #     res[h]= res[h]/float(num_trial)
             maxFee[i][j] = (maxF/num_trial)
             minFee[i][j] = (minF/num_trial)
-            diff[i][j] = (maxFee[i][j] - minFee[i][j])
+            diff[i][j] = (diffTemp/num_trial)
 
     X = np.array(ps)
     Y = np.array(fs)
-    X, Y = np.meshgrid(X, Y)
     Z = np.array(maxFee)
     U = np.array(minFee)
     W = np.array(diff)
@@ -697,28 +460,22 @@ def graphPF(type, p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01,
     ax.set_ylabel('Frequency')
     ax.set_zlabel("Fee Bound Difference")
     ax.set_title("4 node fee bound differences vs payment size vs frequency")
-    ax.view_init(azim=0, elev=90)        
+    # ax.view_init(azim=0, elev=90)        
     fig2.text(0, 0, 'trials: %d; Time: %d' % (num_trial, time))
     surf = ax.plot_surface(X, Y, W, rstride=1, cstride=1, cmap=cm.coolwarm,
                        linewidth=0, antialiased=False)
     fig2.colorbar(surf, shrink=0.5, aspect=10)
 
 
-    fig2.savefig('4node_pf%d.png'%(type))
+    fig2.savefig('4node_pf.png')
 
     intercepts = helpersMatrix.getIntercepts(diff, ps, fs)
     intercepts = np.transpose(np.array(intercepts))
 
-    fitm, fitb = np.polyfit(intercepts[0], intercepts[1], 1)
                         
     if (len(intercepts) != 0):
         print("intercepts")
         print(intercepts)
-
-        fit1 = np.poly1d(np.polyfit(intercepts[0], intercepts[1], 1))
-        fit2 = np.poly1d(np.polyfit(intercepts[0], intercepts[1], 2))
-        fit3 = np.poly1d(np.polyfit(intercepts[0], intercepts[1], 3))
-
 
 
         fig3 = plt.figure(figsize=plt.figaspect(0.5))
@@ -730,24 +487,159 @@ def graphPF(type, p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01,
         ax.set_title("Intersection points")
 
         ax.scatter(intercepts[0], intercepts[1], marker='o')
-        ax.plot(intercepts[0], intercepts[1], '.', intercepts[0], fit1(intercepts[0]), '-', intercepts[0], fit2(intercepts[0]), '--', intercepts[0], fit3(intercepts[0]), '-.')
-
 
 
         fig3.text(0, 0, 'trials: %d; Time: %d' % (num_trial, time))
-        fig3.savefig('4node_pf_inter%d.png'%(type))
+        fig3.savefig('4node_pf_inter.png')
 
 
     
 
+
+def graphPF_Star2(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun = 10.0):
+    # 0.2 to 1.2    
+    ps = [x* psmultiply /psdivision for x in range(psInit, psInit+psLen)]
+    # ps = [x* 1.0 / 1 for x in range(1, 30)]
+    # 0.25 to 1.25
+    fs = [x* fsmultiply /fsdivision for x in range(fsInit, fsInit+fsLen)]
+
+    costOnPay = [[0 for x in range(len(ps))] for x in range(0, 4)]
+    costOnFreq = [[0 for x in range(len(fs))] for x in range(0, 4)]
+    
+    for i in range(len(fs)):
+        print(i)
+        for j in range(len(ps)):
+            print("--star %d-%d" %(i, j))
+            res = [0 for x in range(2)] 
+            
+            for k in range(num_trial):
+                # get the average of the trial given certain freq and p
+                tmp = setUpPF_star2(p=ps[j], freq=fs[i], timeRun = timeRun)
+                temp = [tmp[1][0]-tmp[0][0], tmp[0][1]-tmp[1][1]]
+
+                for h in range(len(temp)):
+                    res[h] += temp[h]
+                for h in range(len(temp)):
+                    res[h]= res[h]/float(num_trial)
+
+                    # get cost for certain p and freq regardless of the other parameter
+                    costOnPay[h][j] += res[h]
+                    costOnFreq[h][i] += res[h]
+        # finished generating all p on certain freq, get cost based on freq
+    for i in range(len(costOnFreq)):
+        for h in range(len(costOnFreq[i])):
+            costOnFreq[i][h] /= len(fs)
+    for i in range(len(costOnPay)):
+        for h in range(len(costOnPay[i])):
+            # finished generting all freq on certain p
+            costOnPay[i][h] /= len(ps)
+    
+
+    fig = plt.figure(figsize=[6.4, 12.8])
+
+    # based on payment
+    ax = fig.add_subplot(2,1, 1)
+    ax.set_xlabel('Payment size')
+    ax.set_ylabel('benefit')
+    ax.set_title('benefit of the transfer in star vs payment size')
+
+    for i in range(0, 2):
+        surf = ax.plot(ps, costOnPay[i])
+
+    ax.legend(["alice", "bob"]) 
+
+    # based on frequency
+    ax = fig.add_subplot(2,1, 2)
+    ax.set_xlabel('frequency (lambda)')
+    ax.set_ylabel('benefit')
+    ax.set_title('benefit of the transfer in star vs frequency')
+
+    for i in range(0, 2):
+        surf = ax.plot(fs, costOnFreq[i])
+    
+    ax.legend(["alice", "bob"]) 
+    
+
+    fig.text(0, 0, 'trials: %d; Time: %d; pD: %d; pM: %f; fD: %d; fM: %f' % (num_trial, time, psdivision, psmultiply, fsdivision, fsmultiply))
+    fig.savefig('4node_fee_star2_0.png')
+
+
+
+def graphPF_Cycle(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun = 10.0):
+    # 0.2 to 1.2    
+    ps = [x* psmultiply /psdivision for x in range(psInit, psInit+psLen)]
+    # ps = [x* 1.0 / 1 for x in range(1, 30)]
+    # 0.25 to 1.25
+    fs = [x* fsmultiply /fsdivision for x in range(fsInit, fsInit+fsLen)]
+
+    costOnPay = [[0 for x in range(len(ps))] for x in range(0, 2)]
+    costOnFreq = [[0 for x in range(len(fs))] for x in range(0, 2)]
+    for i in range(len(fs)):
+        print(i)
+        for j in range(len(ps)):
+            print("-cycle %d-%d" %(i, j))
+            res = [0 for x in range(0, 2)]
+
+            for k in range(num_trial):
+                # get the average of the trial given certain freq and p
+                tmp = setUpPF_cycle(p=ps[j], freq=fs[i], timeRun = timeRun)
+                temp = [tmp[0][0]-tmp[1][0], tmp[1][1]-tmp[0][1]]
+
+                for h in range(len(temp)):
+                    res[h] += temp[h]
+                for h in range(len(temp)):
+                    res[h]= res[h]/float(num_trial)
+
+                    # # get cost for certain p and freq regardless of the other parameter
+                    # print(costOnPay[h][j])
+                    # print(res[h])
+                    costOnPay[h][j] += res[h]
+                    costOnFreq[h][i] += res[h]
+                                    # costOnPay[j] += res[h]
+                # costOnFreq[i] += res[h]
+        
+    # get average to avoid counting for payment size
+    for i in range(len(costOnFreq)):
+        for h in range(len(costOnFreq[i])):
+            costOnFreq[i][h] /= len(fs)
+    for i in range(len(costOnPay)):
+        for h in range(len(costOnPay[i])):
+            # finished generting all freq on certain p
+            costOnPay[i][h] /= len(ps)
+    
+
+    fig = plt.figure(figsize=[6.4, 12.8])
+
+    # based on payment
+    ax = fig.add_subplot(2,1, 1)
+    ax.set_xlabel('Payment size')
+    ax.set_ylabel('benefit')
+    ax.set_title('benefit of the transfer in cycle vs payment size')
+
+    for i in range(0, 2):
+        surf = ax.plot(ps, costOnPay[i])
+
+    ax.legend(["alice", "bob"]) 
+
+    # based on frequency
+    ax = fig.add_subplot(2,1, 2)
+    ax.set_xlabel('frequency (lambda)')
+    ax.set_ylabel('benefit')
+    ax.set_title('benefit of the transfer in cycle vs frequency')
+
+    for i in range(0, 2):
+        surf = ax.plot(fs, costOnFreq[i])
+    
+    ax.legend(["alice", "bob"]) 
+
+    fig.text(0, 0, 'trials: %d; Time: %d; psdiv: %d; psmulti: %f; fsdiv: %d; fsmulti: %f' % (num_trial, time, psdivision, psmultiply, fsmultiply, fsdivision))
+    fig.savefig('4node_fee_cycle.png')
+
 ################ Call #####################
 
 
-# type  0 - single payment star
-#       1 - double payment star
-#       2 - chain/line
 
-graphPF(1, timeRun = time)
+graphPF_Star(time)
 # graphPF_Star2(time)
 # graphPF_Cycle(time)
 
@@ -755,4 +647,4 @@ graphPF(1, timeRun = time)
 # network flow
 # Star: A->B, B->C, C->D, B->D, A->D
 # Cycle: A->B, B->C, C->D, A->D
-# Star2: A->B, B->C, A->D, A->C
+# Star2: A->B, B->C, A->D

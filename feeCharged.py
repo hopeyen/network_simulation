@@ -1,5 +1,7 @@
 import simulation_1
 from simulation_1 import main
+from simulation_1 import mainOppo
+import math
 import random
 import matplotlib
 matplotlib.use('Agg')
@@ -18,7 +20,7 @@ num_trial = 100
 
 time = 50
 
-freqMean = 0.5
+freqMean = 0.17
 
 freqSigma = 0.0001
 
@@ -140,9 +142,7 @@ def networkOG(p, freq, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun = 1
 
     
     network.addPaymentList([paymentAB, paymentBC])
-    # print("network0")
     network.runNetwork()
-    # network.printSummary()
 
     a = Alice.getChCostTotal()
     b = Bob.getChCostTotal()
@@ -171,11 +171,8 @@ def networkDirectAC(p, freq, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeR
     channelAC = simulation_1.Channel(Alice, Charlie, network)
     channelAC.addPayment(paymentAC)
     
-    # print("network1")
     network.addPaymentList([paymentAB, paymentBC, paymentAC])
-
     network.runNetwork()
-    # network.printSummary()
 
     a = Alice.getChCostTotal()
     b = Bob.getChCostTotal()
@@ -210,11 +207,8 @@ def networktransferB(p, freq, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, time
     network.addPaymentList([paymentAB, paymentBC, paymentAC])
     network.addTransferredList([paymentAC1])
 
-    # print("network2")
     network.runNetwork()
     # network.printSummary()
-    # print([paymentAC2, paymentAC2.numPaid])
-
 
     a = Alice.getChCostTotal()
     b = Bob.getChCostTotal()
@@ -230,23 +224,35 @@ def setUp(p=0.1, freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun
 
     return simulation_res
         
+def onChain(freq=0.5, onlineTX = 5.0, onlineTXTime = 1.0, r = 0.01, timeRun = 10.0):
+    cost = 0
+    timeLeft = timeRun
+    while timeLeft > onlineTXTime:
+        timeLeft -= np.random.exponential(freq)
+        timeLeft -= np.random.exponential(onlineTXTime)
+        cost += onlineTX * math.exp(-1 * r * (timeRun - timeLeft))
+
+    return cost
+
+
 
 
 ############# Main functions #####################
 
-def runWithPayment(time):
-    ps = [x* 1.0 /10 for x in range(1, 30)]
+def runWithPayment(time, interest, B):
+    ps = [x* 1.0 /1 for x in range(1, 25)]
 
     for i in range(len(ps)):
         # trial
         print(str(i))
         res = [0, 0, 0, 0, 0, 0]
         temp = []
+
         for k in range(num_trial):
             f = np.random.exponential(freqMean)
             # print(f)
-            tmp = setUp(p=ps[i], freq=f, timeRun = time)
-            temp = list(np.concatenate(tmp).flat)
+            temp = main(p=ps[i], freq=f, timeRun = time, r = interest, onlineTX = B)
+            # temp = list(np.concatenate(tmp).flat)
             for j in range(len(temp)):
                 res[j] += temp[j]
         for j in range(len(res)):
@@ -262,49 +268,19 @@ def runWithPayment(time):
     # if Bob is taking the highest fee he can, then we look at how his costs changes
     # the highest fee Bob can take is Alice's maximum difference of channel costs
     maxFee = chargeFee(alice1, alice0)
-    
-    # aliceAfter_max = payFee(alice0, maxFee)
 
     # bob2'=bob2+(alice2-alice0)
     # minFee = bob2'-bob0 = bob2+(alice2-alice0)-bob0 
     bob22 = payFee(bob2, chargeFee(alice2, alice0))
 
     minFee = chargeFee(bob22, bob0)
-    print("alice OG")
-    print(alice0)
-    print("alice1")
-    print(alice1)
-    print("alice2")
-    print(alice2)
-    print("bob OG")
-    print(bob0)
-    print("bob1")
-    print(bob1)
-    print("bob2")
-    print(bob2)
-    print("\n")
 
-    print("alice escapes")
-    print(chargeFee(alice2, alice0))
-    print("Bob22")
-    print(bob22)
-    print("\n")
-
-    print("max fee")
-    print(maxFee)
-    print("min fee")
-    print(minFee)
-
-
-    print("max min diff" + str(chargeFee(maxFee, minFee)))
-    print("param F " + str(freqMean))
+    chainCost = onChain(freq=f, timeRun = time, r = interest, onlineTX = B)
     
     diff = chargeFee(maxFee, minFee)
 
-    
-
     inter = getIntersections(maxFee, minFee, ps)
-
+    # titles = ['Channel costs vs payment size in different networks']
     titles = ['Maximum fee and minimum fee vs payment size', 
             'benefit after min fee vs payment size']
     # Zs = [(aliceBenefit_max, bobBenefit_max), (aliceBenefit_min, bobBenefit_min)]
@@ -320,14 +296,16 @@ def runWithPayment(time):
         # ax.plot(ps, bob0)
         # ax.plot(ps, alice0, "k--")
         # ax.plot(ps, bob1)
-        # ax.plot(ps, alice1, "b--")
-        # ax.plot(ps, bob2, "r-.")
-        # ax.plot(ps, alice2, "g--")
+        # ax.plot(ps, alice1)
+        # ax.plot(ps, bob2)
+        # ax.plot(ps, alice2)
 
         ax.plot(ps, maxFee, "k--")
         ax.plot(ps, minFee, "r-.")
         ax.plot(ps, diff, "b")
+        ax.hlines(y=chainCost, xmin=ps[0], xmax=ps[-1])
         ax.plot(ps, [0 for x in range(len(ps))])
+
 
         
 
@@ -340,32 +318,15 @@ def runWithPayment(time):
 
         fig.text(0, 0, 'Trials: %d; Time: %d; Freq mean: %0.2f' % (num_trial, time, freqMean))
         ax.set_title(titles[i])
-        fig.legend(["maximum fee", "minimum fee", "difference between max and min"])
-        # fig.legend(["bob0", "alice0", "bob1", "alice1", "bob2", "alice2"])
+        fig.legend(["maximum fee", "minimum fee", "difference between max and min", "on-Chain costs"])
+        # fig.legend(["b0, a0, b1", "a1", "a2, b2"])
 
 
     fig.savefig('testIntercepts.png')
 
-
-    # print("checking")
-    # for pt in range(len(inter)):
-    #     print(inter[pt])
-    #     print("gives")
-
-    #     print(getFees(inter[pt][0], freqMean, time))
-
-    # print("mannual")
-    # res = [[],[]]
-    # for i in range(100):
-    #     tmp = getFees(0.3, 0.1, time)
-    #     res[0].append(tmp[0])
-    #     res[1].append(tmp[1])
-    # print(sum(res[0]), sum(res[1]))
-
-
 ################ Call #####################
 
-runWithPayment(time)
+runWithPayment(time, 0.01, 5.0)
 # runWithFreq()
 
 # getFees(0.3, 0.1, time)
