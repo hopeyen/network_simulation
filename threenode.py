@@ -275,48 +275,6 @@ def runWithPayment(time, r, B, type):
         fig3.savefig('3node_pf_interOppo%d.png'%type)
 
 
-    # fig4 = plt.figure(figsize=plt.figaspect(0.5))
-
-    # ax = fig4.add_subplot(1, 1, 1, projection='3d')
-    # ax.set_xlabel('Payment size')
-    # ax.set_ylabel('Frequency')
-    # ax.set_zlabel("Fee cost")
-    # ax.set_title("Possible fees for both parties")
-    # # ax.view_init(azim=0, elev=90)        
-
-    # verts = [list(zip(ps,fs,maxFee))]
-    # # verts2 = [list(zip(ps,fs,minFee))]
-    # # verts.extend([list(zip(X,Y,U))])
-    # ax.add_collection3d(Poly3DCollection(verts))
-    # # ax.add_collection3d(Poly3DCollection(verts2))
-
-    
-    # # surf = ax.plot_surface(X, Y, Zs[i], rstride=1, cstride=1, cmap=cm.coolwarm,
-    #                    # linewidth=0, antialiased=False)
-    # # fig2.colorbar(surf, shrink=0.5, aspect=10)
-    # fig4.savefig('3node_pf2.png')
-
-    # fig4 = plt.figure(figsize=plt.figaspect(0.5))
-   
-    # ax = fig4.add_subplot(1, 1, 1, projection='3d')
-
-
-    # ax.set_xlabel('Payment size')
-    # ax.set_ylabel('Frequency')
-    # ax.set_zlabel("Minimum fee")
-    # ax.set_title("Minimum fee vs Frequency vs size")
-    # # ax.view_init(azim=0, elev=90)        
-    
-    
-    # surf = ax.plot_surface(X, Y, U, zorder=1, rstride=1, cstride=1, cmap=cm.coolwarm,
-    #                    linewidth=0, antialiased=False)
-    # fig4.colorbar(surf, shrink=0.5, aspect=10)
-
-    
-
-
-    # fig4.savefig('3node_pfMinfee%d.png'%type)
-
     return intercepts
 
 
