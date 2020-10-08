@@ -1,0 +1,183 @@
+\documentclass[12pt]{article}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{dsfont}
+\usepackage{amsmath}
+\usepackage[latin1]{inputenc}
+\usepackage[english]{babel}
+\usepackage{graphicx}
+\usepackage{bbm}
+\usepackage{tikz}
+\usepackage{color}  
+%\usepackage{nath}
+%\delimgrowth=1
+
+\usepackage[margin=1in,footskip=0.25in]{geometry}
+\linespread{1.3}
+
+\usepackage{verbatim}
+\usepackage{enumitem}
+
+\newtheorem{theorem}{Theorem}%[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{question}{Open question}
+\newtheorem{defi}[theorem]{Definition}
+\theoremstyle{plain}
+\newtheorem{assumption}{Assumption}
+
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+\newtheorem{example}{\it Example\/}
+
+\theoremstyle{definition}
+\newtheorem{exercise}{Exercise}
+\newtheorem{problem}{Problem}
+
+\def\RRn{\mathbb{R}^n}
+\def\RR{\mathbb{R}}
+\def\RRN{\mathbb{R}^N}
+\def\ZZ{\mathbb{Z}}
+\def\ZZN{\mathbb{Z}^N}
+\def\RRnm{\mathbb{R}^{n \times m}}
+\def\RRmn{\mathbb{R}^{m \times n}}
+
+\def\dd{\, \mathrm{d}}
+
+\def\grad{\nabla}
+\def\weakConv{\rightharpoonup}
+\def\LL{\mathrm{L}}
+\def\WW{\mathrm{W}}
+\def\naturals{\mathbb{N}}
+
+\def\intRRn{\int_{\RRn}}
+
+\def\calM{\mathcal{M}}
+\def\calE{\mathcal{E}_p}
+\def\calC{\mathcal{C}}
+
+\def\dist{\text{dist}}
+\def\supp{\text{supp}}
+\def\indyk{\mathds{1}}
+
+\def\intOmega{\int_{\Omega}}
+\def\intRRnm{\int_{\RRnm}}
+
+\def\PP{\mathrm{P}}
+
+\def\Ccinfty{C_c^{\infty}}
+
+\DeclareMathOperator{\im}{Im}
+\DeclareMathOperator{\id}{Id}
+\renewcommand{\phi}{\varphi}
+\renewcommand{\epsilon}{\varepsilon}
+\renewcommand{\geq}{\geqslant}
+\renewcommand{\leq}{\leqslant}
+\renewcommand{\div}{\text{div}}
+
+\newcommand{\measurerestr}{%
+  \,\raisebox{-.127ex}{\reflectbox{\rotatebox[origin=br]{-90}{$\lnot$}}}\,%
+}
+
+\def\Xint#1{\mathchoice
+{\XXint\displaystyle\textstyle{#1}}%
+{\XXint\textstyle\scriptstyle{#1}}%
+{\XXint\scriptstyle\scriptscriptstyle{#1}}%
+{\XXint\scriptscriptstyle\scriptscriptstyle{#1}}%
+\!\int}
+\def\XXint#1#2#3{{\setbox0=\hbox{$#1{#2#3}{\int}$ }
+\vcenter{\hbox{$#2#3$ }}\kern-.6\wd0}}
+\def\ddashint{\Xint=}
+\def\dashint{\Xint-}
+
+\renewcommand{\phi}{\varphi}
+\renewcommand{\epsilon}{\varepsilon}
+\renewcommand{\geq}{\geqslant}
+\renewcommand{\leq}{\leqslant}
+
+\def\RRn{\mathbb{R}^n}
+\def\RR{\mathbb{R}}
+\def\RRN{\mathbb{R}^N}
+\def\ZZ{\mathbb{Z}}
+\def\ZZN{\mathbb{Z}^N}
+\def\multiindices{\mathbb{Z}^N_+}
+\def\RRnm{\mathbb{R}^{n \times m}}
+\def\RRmn{\mathbb{R}^{m \times n}}
+\def\naturals{\mathbb{N}}
+
+\def\Ccinfty{C_c^{\infty}}
+
+\def\dd{\, \mathrm{d}}
+\def\grad{\nabla}
+\def\weakConv{\rightharpoonup}
+
+\def\intRRn{\int_{\RRn}}
+\def\intOmega{\int_{\Omega}}
+\def\intRRnm{\int_{\RRnm}}
+\def\intRRN{\int_{\RRN}}
+
+\def\RRNn{\RR^{N \times n}}
+
+\def\CC{\mathrm{C}}
+
+\def\RRn{\RR^n}
+\def\RRm{\RR^m}
+
+\usetikzlibrary{shapes, arrows, calc, arrows.meta, fit, positioning}  
+\tikzset{  
+    -Latex,auto,node distance =1.5 cm and 1.3 cm, thick,
+    state/.style ={ellipse, draw, minimum width = 0.9 cm}, 
+    point/.style = {circle, draw, inner sep=0.18cm, fill, node contents={}},  
+    bidirected/.style={Latex-Latex}, 
+    el/.style = {inner sep=2.5pt, align=right, sloped}  
+}  
+
+\def\hint{\noindent \textbf{Hint: }}
+\begin{document}
+
+\begin{center}
+\begin{Large}
+\textbf{LN fee bounds: Implementation plan}
+
+\end{Large}
+\text{sketch}
+\end{center}
+
+
+\subsubsection{parameters/class}
+\begin{itemize}
+    \item payments: $\lambda, c,p\in \RR$, sender address, reciever address, (add route later)
+    \item Channels (parent class): $m, ibd, obd\in \RR$ (size and balances), payments, name
+    \item Unidirectional channels: Channels, cost ($\sqrt{\frac{2B\lambda c}{r}}$)
+    \item Bidirectional channels: Channels x 2, cost ($3(\frac{2B\lambda}{r})^{1/3}$)
+    \item Node: $R\in \RR$ (revenue), address, list of channels, payments, 
+    \item Network: nodes, $B, r\in \RR$, time
+\end{itemize}
+
+
+\subsubsection{overview}
+The network contains nodes, each has a set of existing channels and payments. 
+
+The simulation selects a node to make additional payment to a nonneighbor. Change $p$ and observe if the node should make a directed channel or use an intermediate node. For the intermediate node, observe how its revenue changes. 
+
+\subsubsection{assumptions}
+\begin{itemize}
+    \item Intermediate node is responsible for the change in cost of the channels 
+    \item The sender node pays all the transaction fee
+    \item B, r are costant throughout channel lifetime
+    \item channel lifetime and time between each transaction are random variables
+\end{itemize}
+
+\subsubsection{functions} 
+
+channel: getNumTX ($k$), getLifetime ($\tau(\alpha)$), getTxFee ($T(\alpha)$), getOppoCost ($I(\alpha)$), getChannelCost (depends on the type of the channel)
+
+\subsubsection{implementation}
+At the start, build the network with 3 nodes: Alice, Bob, and Charlie. Construct an unidirectional channel between Alice and Bob, and then construct a bidirectional channel between Bob and Charlie. Set the average channel lifetime and frequency parameters. Also provide $B,r$. 
+\\ At each round, generate the time between the transactions Alice makes. 
+\\ Bob and Charlie's transaction depends on $\lambda$.
+\\ The independent variable is p, the dependent varaible for Alice is the cost of direct channels and transactions fee, and the independent variable for Bob is his revenue. 
+\\ Compare the result with lower and upper bound calculations
+\end{document}
+
